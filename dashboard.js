@@ -976,167 +976,55 @@ const DashboardApp = (() => {
     }
   }
 
-  // Custom Inline Plugin: Matplotlib-Style Callout Leader Lines & Boxes
-  const matplotlibCallouts = {
-    id: 'matplotlibCallouts',
-    afterDraw(chart) {
+  // Custom Plugin: Render Value Pills Above Weekly Category Bars
+  const weeklyCategoryValuePlugin = {
+    id: 'weeklyCategoryValuePlugin',
+    afterDatasetsDraw(chart) {
       const { ctx, chartArea } = chart;
       if (!chartArea) return;
-      const dataset = chart.data.datasets[0];
-      if (!dataset || !dataset.data) return;
       const meta = chart.getDatasetMeta(0);
-      if (!meta || !meta.data || meta.data.length === 0) return;
+      if (!meta || !meta.data) return;
 
-      const total = chart.config._totalTasks || 0;
-      const cx = (chartArea.left + chartArea.right) / 2;
-      const cy = (chartArea.top + chartArea.bottom) / 2;
+      const dataset = chart.data.datasets[0];
+      const colors = ['#4F46E5', '#059669', '#7C3AED', '#E11D48', '#D97706'];
 
-      // Empty State Fallback
-      if (total === 0 || chart.config._isEmpty) {
-        ctx.save();
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.font = '700 11px "Plus Jakarta Sans", sans-serif';
-        ctx.fillStyle = '#94A3B8';
-        ctx.fillText('No Activity Yet', cx, cy);
-        ctx.restore();
-        return;
-      }
-
-      const callouts = [];
-      meta.data.forEach((element, idx) => {
-        const val = Number(dataset.data[idx]) || 0;
+      meta.data.forEach((bar, index) => {
+        const val = dataset.data[index] || 0;
         if (val <= 0) return;
 
-        const label = chart.data.labels[idx] || '';
-        const color = dataset.backgroundColor[idx] || '#4F46E5';
-        const angle = (element.startAngle + element.endAngle) / 2;
-        const r = element.outerRadius;
-
-        // Point A: Outer arc coordinate
-        const ptAx = cx + Math.cos(angle) * r;
-        const ptAy = cy + Math.sin(angle) * r;
-
-        // Point B (Angled bend): 14px out from outer radius
-        const ptBx = cx + Math.cos(angle) * (r + 14);
-        const ptBy = cy + Math.sin(angle) * (r + 14);
-
-        // Direction: Right side vs Left side
-        const isRight = Math.cos(angle) >= 0;
-
-        // Point C (Horizontal arm): Extends 20px horizontally
-        const ptCx = isRight ? ptBx + 20 : ptBx - 20;
-        const ptCy = ptBy;
-
-        callouts.push({
-          idx,
-          label,
-          val,
-          color,
-          angle,
-          isRight,
-          ptAx,
-          ptAy,
-          ptBx,
-          ptBy,
-          ptCx,
-          ptCy
-        });
-      });
-
-      // Anti-collision spacing pass per side
-      const MIN_BOX_GAP = 22;
-      ['right', 'left'].forEach(side => {
-        const sideList = callouts.filter(c => (side === 'right' ? c.isRight : !c.isRight));
-        sideList.sort((a, b) => a.ptCy - b.ptCy);
-
-        // Forward pass: resolve downward overlaps
-        for (let i = 1; i < sideList.length; i++) {
-          if (sideList[i].ptCy - sideList[i - 1].ptCy < MIN_BOX_GAP) {
-            sideList[i].ptCy = sideList[i - 1].ptCy + MIN_BOX_GAP;
-            sideList[i].ptBy = sideList[i].ptCy;
-          }
-        }
-
-        // Boundary constraint pass: keep within chartArea bounds
-        const maxY = chartArea.bottom - 4;
-        if (sideList.length > 0 && sideList[sideList.length - 1].ptCy > maxY) {
-          const shift = sideList[sideList.length - 1].ptCy - maxY;
-          for (let i = sideList.length - 1; i >= 0; i--) {
-            sideList[i].ptCy -= shift;
-            sideList[i].ptBy = sideList[i].ptCy;
-            if (i > 0 && sideList[i].ptCy - sideList[i - 1].ptCy < MIN_BOX_GAP) {
-              sideList[i - 1].ptCy = sideList[i].ptCy - MIN_BOX_GAP;
-              sideList[i - 1].ptBy = sideList[i - 1].ptCy;
-            }
-          }
-        }
-      });
-
-      // Draw leader lines and Matplotlib-style callout boxes
-      ctx.save();
-      callouts.forEach(c => {
-        const text = `${c.label}: ${c.val}`;
-
-        // 1. Draw 2-segment elbow connector stroke
-        ctx.beginPath();
-        ctx.strokeStyle = '#475569';
-        ctx.lineWidth = 1.2;
-        ctx.lineJoin = 'round';
-        ctx.lineCap = 'round';
-        ctx.moveTo(c.ptAx, c.ptAy);
-        ctx.lineTo(c.ptBx, c.ptBy);
-        ctx.lineTo(c.ptCx, c.ptCy);
-        ctx.stroke();
-
-        // 2. Measure & Draw Matplotlib-Style Rectangular Box
-        ctx.font = '800 10px "JetBrains Mono", monospace';
+        ctx.save();
+        const text = `${val}`;
+        ctx.font = 'bold 9px "JetBrains Mono", monospace';
         const textWidth = ctx.measureText(text).width;
-        const boxW = textWidth + 14;
-        const boxH = 19;
-        const boxX = c.isRight ? c.ptCx + 3 : c.ptCx - boxW - 3;
-        const boxY = c.ptCy - boxH / 2;
+        const pillW = Math.max(textWidth + 8, 16);
+        const pillH = 13;
+        const pillX = bar.x - pillW / 2;
+        const pillY = Math.max(bar.y - pillH - 2, chartArea.top + 2);
 
-        // Subtle Box Shadow
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.08)';
-        ctx.shadowBlur = 5;
-        ctx.shadowOffsetY = 2;
-
-        // Background Box with 1px border and border-radius 4px
+        // Draw pill background
         ctx.fillStyle = '#FFFFFF';
-        ctx.strokeStyle = '#94A3B8';
+        ctx.strokeStyle = colors[index] || '#6366F1';
         ctx.lineWidth = 1;
         ctx.beginPath();
         if (ctx.roundRect) {
-          ctx.roundRect(boxX, boxY, boxW, boxH, 4);
+          ctx.roundRect(pillX, pillY, pillW, pillH, 4);
         } else {
-          ctx.rect(boxX, boxY, boxW, boxH);
+          ctx.rect(pillX, pillY, pillW, pillH);
         }
         ctx.fill();
         ctx.stroke();
 
-        // Reset Shadow for Text
-        ctx.shadowColor = 'transparent';
-        ctx.shadowBlur = 0;
-        ctx.shadowOffsetY = 0;
-
-        // Color Bullet Accent
-        ctx.beginPath();
-        ctx.arc(boxX + 6, boxY + boxH / 2, 2.5, 0, Math.PI * 2);
-        ctx.fillStyle = c.color;
-        ctx.fill();
-
-        // Callout Text inside box
-        ctx.fillStyle = '#0F172A';
-        ctx.textAlign = 'left';
+        // Draw pill text
+        ctx.fillStyle = colors[index] || '#6366F1';
+        ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(text, boxX + 11, boxY + boxH / 2 + 0.5);
+        ctx.fillText(text, bar.x, pillY + pillH / 2 + 0.5);
+        ctx.restore();
       });
-      ctx.restore();
     }
   };
 
-  // 1. Weekly Breakdown Donut Chart (Real Tasks Sync Across All Categories)
+  // 1. Weekly Category Breakdown Bar Chart (Real Tasks Sync Across All Categories)
   function getWeeklyPieData() {
     const weekDays = getCurrentWeekDates();
     let dsaDone = 0, aptDone = 0, engDone = 0, gymDone = 0, revDone = 0;
@@ -1182,13 +1070,11 @@ const DashboardApp = (() => {
     setElText('pie-total-badge', `${totalTasks} Task${totalTasks !== 1 ? 's' : ''}`);
     setElText('pie-center-val', `${totalTasks}`);
 
-    const labels = ['DSA', 'Apti', 'English', 'Gym', 'Revision'];
-    const colors = ['#4F46E5', '#10B981', '#8B5CF6', '#F43F5E', '#F59E0B'];
+    const labels = ['DSA', 'Apti', 'Eng', 'Gym', 'Rev'];
 
     return {
       labels,
       counts,
-      colors,
       totalTasks,
       isEmpty: totalTasks === 0
     };
@@ -1202,45 +1088,96 @@ const DashboardApp = (() => {
 
     if (barChartInstance) barChartInstance.destroy();
 
+    // Gradients for each category
+    const dsaGrad = ctx.createLinearGradient(0, 0, 0, 110);
+    dsaGrad.addColorStop(0, '#6366F1');
+    dsaGrad.addColorStop(1, '#4338CA');
+
+    const aptGrad = ctx.createLinearGradient(0, 0, 0, 110);
+    aptGrad.addColorStop(0, '#10B981');
+    aptGrad.addColorStop(1, '#059669');
+
+    const engGrad = ctx.createLinearGradient(0, 0, 0, 110);
+    engGrad.addColorStop(0, '#A855F7');
+    engGrad.addColorStop(1, '#7C3AED');
+
+    const gymGrad = ctx.createLinearGradient(0, 0, 0, 110);
+    gymGrad.addColorStop(0, '#F43F5E');
+    gymGrad.addColorStop(1, '#E11D48');
+
+    const revGrad = ctx.createLinearGradient(0, 0, 0, 110);
+    revGrad.addColorStop(0, '#F59E0B');
+    revGrad.addColorStop(1, '#D97706');
+
+    const emptyGrad = ctx.createLinearGradient(0, 0, 0, 110);
+    emptyGrad.addColorStop(0, '#F1F5F9');
+    emptyGrad.addColorStop(1, '#E2E8F0');
+
+    const grads = [dsaGrad, aptGrad, engGrad, gymGrad, revGrad];
+    const backgroundColors = pieData.counts.map((val, idx) => (val === 0 ? emptyGrad : grads[idx]));
+
+    const maxVal = Math.max(...pieData.counts, 5);
+
     barChartInstance = new Chart(ctx, {
-      type: 'doughnut',
+      type: 'bar',
       data: {
         labels: pieData.labels,
         datasets: [{
-          data: pieData.totalTasks === 0 ? [1] : pieData.counts,
-          backgroundColor: pieData.totalTasks === 0
-            ? ['#E2E8F0']
-            : pieData.colors,
-          borderWidth: 2.5,
-          borderColor: '#FFFFFF',
-          hoverOffset: 4
+          data: pieData.counts,
+          backgroundColor: backgroundColors,
+          borderRadius: { topLeft: 6, topRight: 6, bottomLeft: 0, bottomRight: 0 },
+          borderSkipped: 'bottom',
+          barPercentage: 0.58,
+          categoryPercentage: 0.8
         }]
       },
-      plugins: [matplotlibCallouts],
+      plugins: [weeklyCategoryValuePlugin],
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        cutout: '58%',
         layout: {
-          padding: {
-            left: 55,
-            right: 55,
-            top: 20,
-            bottom: 20
-          }
+          padding: { top: 16, bottom: 0, left: 0, right: 0 }
         },
         plugins: {
           legend: { display: false },
           tooltip: {
-            enabled: pieData.totalTasks > 0,
             backgroundColor: '#0F172A',
             titleFont: { size: 10, weight: 'bold', family: '"Plus Jakarta Sans", sans-serif' },
             bodyFont: { size: 9, family: '"JetBrains Mono", monospace' },
             padding: 8,
-            cornerRadius: 6,
+            cornerRadius: 8,
             callbacks: {
-              label: (ctx) => ` ${ctx.label}: ${ctx.raw} task(s)`
+              label: (c) => ` ${c.label}: ${c.raw} task(s)`
             }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            border: { display: false },
+            ticks: {
+              color: '#64748B',
+              font: {
+                weight: '700',
+                size: 9.5,
+                family: '"Plus Jakarta Sans", sans-serif'
+              }
+            }
+          },
+          y: {
+            min: 0,
+            max: Math.ceil(maxVal * 1.15),
+            ticks: {
+              stepSize: maxVal <= 6 ? 2 : 5,
+              callback: (v) => `${v}`,
+              color: '#64748B',
+              font: { size: 9, family: '"JetBrains Mono", monospace', weight: '700' }
+            },
+            grid: {
+              color: 'rgba(226, 232, 240, 0.8)',
+              borderDash: [3, 3]
+            },
+            border: { display: false }
           }
         }
       }
