@@ -370,7 +370,11 @@ async function sendFcmMessage(projectId, accessToken, token, reminderData) {
         } else {
           try {
             const errJson = JSON.parse(body);
-            resolve({ ok: false, status: res.statusCode, error: errJson.error ? errJson.error.message : body });
+            let errMsg = errJson.error ? errJson.error.message : body;
+            if (errMsg.includes('NotRegistered') || errMsg.includes('UNREGISTERED') || errMsg.includes('Requested entity was not found')) {
+              errMsg += '\n👉 REASON: The FCM_DEVICE_TOKEN in GitHub Secrets has expired or does not belong to the current Firebase project.\n👉 FIX: Open dashboard.html in your browser, allow notifications, copy the fresh FCM Token from the diagnostics card, and update GitHub Secret "FCM_DEVICE_TOKEN".';
+            }
+            resolve({ ok: false, status: res.statusCode, error: errMsg });
           } catch (e) {
             resolve({ ok: false, status: res.statusCode, error: body });
           }
