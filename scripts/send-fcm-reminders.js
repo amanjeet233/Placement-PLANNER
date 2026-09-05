@@ -113,14 +113,26 @@ function normalizePrivateKey(rawKey) {
     } catch (e) { /* continue */ }
   }
 
-  // 3. Convert all variations of escaped newlines (\\n, \\\n, etc.) to real newlines
+  // 3. Convert all variations of escaped newlines (\n, \\n, \\\n, etc.) to real newlines
   key = key.replace(/\\+n/g, '\n').replace(/\r/g, '').trim();
 
-  // 4. Ensure header and footer are formatted correctly
-  const header = '-----BEGIN PRIVATE KEY-----';
-  const footer = '-----END PRIVATE KEY-----';
+  // 4. Ensure header and footer are formatted correctly (supporting PKCS#8 and PKCS#1)
+  const pk8Header = '-----BEGIN PRIVATE KEY-----';
+  const pk8Footer = '-----END PRIVATE KEY-----';
+  const pk1Header = '-----BEGIN RSA PRIVATE KEY-----';
+  const pk1Footer = '-----END RSA PRIVATE KEY-----';
 
-  if (key.includes(header) && key.includes(footer)) {
+  let header = '';
+  let footer = '';
+  if (key.includes(pk8Header) && key.includes(pk8Footer)) {
+    header = pk8Header;
+    footer = pk8Footer;
+  } else if (key.includes(pk1Header) && key.includes(pk1Footer)) {
+    header = pk1Header;
+    footer = pk1Footer;
+  }
+
+  if (header && footer) {
     const body = key
       .replace(header, '')
       .replace(footer, '')
@@ -142,11 +154,13 @@ async function getGoogleAccessToken(clientEmail, rawPrivateKey) {
     try {
       const formattedKey = normalizePrivateKey(rawPrivateKey);
 
-      if (!formattedKey || !formattedKey.includes('-----BEGIN PRIVATE KEY-----')) {
-        return reject(new Error('FIREBASE_PRIVATE_KEY is empty or missing valid PEM header. Check your GitHub repository secrets.'));
+      if (!formattedKey || (!formattedKey.includes('-----BEGIN PRIVATE KEY-----') && !formattedKey.includes('-----BEGIN RSA PRIVATE KEY-----'))) {
+        return reject(new Error('FIREBASE_PRIVATE_KEY is empty or missing valid PEM header (-----BEGIN PRIVATE KEY-----). Check that you copied "private_key" and not "private_key_id" in GitHub repository secrets.'));
       }
+
+      let keyObj;
       try {
-        crypto.createPrivateKey({ key: formattedKey, format: 'pem' });
+        keyObj = crypto.createPrivateKey({ key: formattedKey, format: 'pem' });
       } catch (pemErr) {
         return reject(new Error(`FIREBASE_PRIVATE_KEY could not be decoded as a valid PEM private key: ${pemErr.message}`));
       }
@@ -168,7 +182,7 @@ async function getGoogleAccessToken(clientEmail, rawPrivateKey) {
       const sign = crypto.createSign('RSA-SHA256');
       sign.update(signatureInput);
       sign.end();
-      const signature = sign.sign(formattedKey, 'base64')
+      const signature = sign.sign(keyObj, 'base64')
         .replace(/=/g, '')
         .replace(/\+/g, '-')
         .replace(/\//g, '_');
