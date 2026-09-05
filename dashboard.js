@@ -1103,9 +1103,9 @@ const DashboardApp = (() => {
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        cutout: '68%',
+        cutout: '58%',
         layout: {
-          padding: 4
+          padding: 0
         },
         plugins: {
           legend: { display: false },
