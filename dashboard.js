@@ -976,37 +976,71 @@ const DashboardApp = (() => {
     }
   }
 
-  // Custom Plugin: Doughnut Center Metric (Displays Total Tasks Cleanly, Zero Text Overlaps)
-  const doughnutCenterTextPlugin = {
-    id: 'doughnutCenterTextPlugin',
+  // Custom Plugin: Crisp In-Slice Percentage Labels for Solid 3D-Look Pie Chart
+  const pieSlicePercentagesPlugin = {
+    id: 'pieSlicePercentagesPlugin',
     afterDraw(chart) {
-      if (chart.config.type !== 'doughnut') return;
+      if (chart.config.type !== 'pie') return;
       const { ctx, chartArea } = chart;
       if (!chartArea) return;
-      const total = chart.config._totalTasks || 0;
-      const cx = (chartArea.left + chartArea.right) / 2;
-      const cy = (chartArea.top + chartArea.bottom) / 2;
+      const dataset = chart.data.datasets[0];
+      if (!dataset || !dataset.data) return;
+
+      const meta = chart.getDatasetMeta(0);
+      if (!meta || !meta.data || meta.data.length === 0) return;
+
+      const total = dataset.data.reduce((sum, v) => sum + (Number(v) || 0), 0);
+      if (total === 0 || chart.config._isEmpty) {
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const cx = (chartArea.left + chartArea.right) / 2;
+        const cy = (chartArea.top + chartArea.bottom) / 2;
+        ctx.font = 'bold 10px "Plus Jakarta Sans", sans-serif';
+        ctx.fillStyle = '#94A3B8';
+        ctx.fillText('0 Tasks Logged', cx, cy);
+        ctx.restore();
+        return;
+      }
 
       ctx.save();
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      if (total === 0 || chart.config._isEmpty) {
-        ctx.font = 'bold 10.5px "Plus Jakarta Sans", sans-serif';
-        ctx.fillStyle = '#94A3B8';
-        ctx.fillText('0 Tasks', cx, cy);
-      } else {
-        ctx.font = '800 13px "JetBrains Mono", monospace';
-        ctx.fillStyle = '#0F172A';
-        ctx.fillText(`${total}`, cx, cy - 6);
-        ctx.font = '700 8.5px "Plus Jakarta Sans", sans-serif';
-        ctx.fillStyle = '#64748B';
-        ctx.fillText(total === 1 ? 'TASK' : 'TASKS', cx, cy + 8);
-      }
+      meta.data.forEach((arc, idx) => {
+        const val = Number(dataset.data[idx]) || 0;
+        if (val <= 0) return;
+
+        const pctNum = Math.round((val / total) * 100);
+        if (pctNum <= 0) return;
+
+        const startAngle = arc.startAngle;
+        const endAngle = arc.endAngle;
+        const angleSpan = endAngle - startAngle;
+        const midAngle = startAngle + angleSpan / 2;
+
+        const outerR = arc.outerRadius;
+        const cx = arc.x;
+        const cy = arc.y;
+
+        // Draw In-Slice Percentage text (bold white with text shadow)
+        if (angleSpan > 0.28) {
+          const inRadius = outerR * 0.60;
+          const px = cx + Math.cos(midAngle) * inRadius;
+          const py = cy + Math.sin(midAngle) * inRadius;
+
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.font = '800 11px "JetBrains Mono", monospace';
+          ctx.fillStyle = '#FFFFFF';
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
+          ctx.shadowBlur = 3;
+          ctx.fillText(`${pctNum}%`, px, py);
+          ctx.shadowBlur = 0;
+        }
+      });
       ctx.restore();
     }
   };
 
-  // 1. Weekly Breakdown Doughnut Chart
+  // 1. Weekly Breakdown Solid Pie Chart
   function getWeeklyPieData() {
     const weekDays = getCurrentWeekDates();
     let dsaDone = 0, aptDone = 0, engDone = 0, gymDone = 0, revDone = 0;
@@ -1050,19 +1084,19 @@ const DashboardApp = (() => {
     setElText('pie-cnt-rev', `${revDone}`);
     setElText('pie-total-badge', `${totalTasks} Task${totalTasks !== 1 ? 's' : ''}`);
 
-    // Exact Daily Tracker Colors matching the user's reference image
-    // DSA (Blue), Aptitude (Emerald), English (Purple), Gym (Coral/Pink), Revision (Amber/Yellow)
+    // Vibrant Professional 3D Palette (Matching Reference Spec)
+    // DSA (Royal Blue), Aptitude (Emerald Green), English (Purple), Gym (Coral Red), Revision (Amber Gold)
     const labels = ['DSA', 'Apti', 'Eng', 'Gym', 'Rev'];
-    const colors = ['#3B82F6', '#10B981', '#A855F7', '#FB7185', '#FBBF24'];
-    const hoverColors = ['#2563EB', '#059669', '#9333EA', '#F43F5E', '#F59E0B'];
+    const colors = ['#2563EB', '#059669', '#7C3AED', '#E11D48', '#D97706'];
+    const hoverColors = ['#1D4ED8', '#047857', '#6D28D9', '#BE123C', '#B45309'];
 
-    // If no tasks done yet, show subtle empty doughnut placeholder
+    // If no tasks done yet, show subtle empty placeholder
     if (totalTasks === 0) {
       return {
         labels: ['Pending Tasks'],
         data: [1],
-        backgroundColor: ['#F1F5F9'],
-        hoverBackgroundColor: ['#E2E8F0'],
+        backgroundColor: ['#E2E8F0'],
+        hoverBackgroundColor: ['#CBD5E1'],
         totalTasks: 0,
         isEmpty: true
       };
@@ -1087,25 +1121,24 @@ const DashboardApp = (() => {
     if (barChartInstance) barChartInstance.destroy();
 
     barChartInstance = new Chart(ctx, {
-      type: 'doughnut',
+      type: 'pie',
       data: {
         labels: pieData.labels,
         datasets: [{
           data: pieData.data,
           backgroundColor: pieData.backgroundColor,
           hoverBackgroundColor: pieData.hoverBackgroundColor,
-          borderWidth: 2,
+          borderWidth: 1.5,
           borderColor: '#FFFFFF',
-          hoverOffset: 3
+          hoverOffset: 4
         }]
       },
-      plugins: [doughnutCenterTextPlugin],
+      plugins: [pieSlicePercentagesPlugin],
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        cutout: '58%',
         layout: {
-          padding: 0
+          padding: 2
         },
         plugins: {
           legend: { display: false },
