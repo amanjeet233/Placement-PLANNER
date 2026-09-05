@@ -100,17 +100,17 @@ function normalizePrivateKey(rawKey) {
   if (!rawKey || typeof rawKey !== 'string') return '';
   let key = rawKey.trim();
 
-  // 1. Handle case where user accidentally pasted the entire service account JSON
+  // 1. Strip surrounding wrapping quotes
+  if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
+    key = key.slice(1, -1).trim();
+  }
+
+  // 2. Handle case where user accidentally pasted the entire service account JSON
   if (key.startsWith('{') && key.includes('private_key')) {
     try {
       const parsed = JSON.parse(key);
-      if (parsed.private_key) key = parsed.private_key.trim();
+      if (parsed.private_key) key = String(parsed.private_key).trim();
     } catch (e) { /* continue */ }
-  }
-
-  // 2. Strip surrounding wrapping quotes
-  if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
-    key = key.slice(1, -1).trim();
   }
 
   // 3. Convert all variations of escaped newlines (\\n, \\\n, etc.) to real newlines
@@ -144,6 +144,11 @@ async function getGoogleAccessToken(clientEmail, rawPrivateKey) {
 
       if (!formattedKey || !formattedKey.includes('-----BEGIN PRIVATE KEY-----')) {
         return reject(new Error('FIREBASE_PRIVATE_KEY is empty or missing valid PEM header. Check your GitHub repository secrets.'));
+      }
+      try {
+        crypto.createPrivateKey({ key: formattedKey, format: 'pem' });
+      } catch (pemErr) {
+        return reject(new Error(`FIREBASE_PRIVATE_KEY could not be decoded as a valid PEM private key: ${pemErr.message}`));
       }
 
       const now = Math.floor(Date.now() / 1000);
