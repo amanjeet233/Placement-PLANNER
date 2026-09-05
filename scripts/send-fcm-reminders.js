@@ -113,8 +113,13 @@ function normalizePrivateKey(rawKey) {
     key = key.slice(1, -1).trim();
   }
 
-  // 3. Convert all variations of escaped newlines (\\n, \\\n, etc.) to real newlines
-  key = key.replace(/\\+n/g, '\n').replace(/\r/g, '').trim();
+  // 3. Convert common escaped newline variants to real newlines
+  key = key
+    .replace(/\\r\\n/g, '\n')
+    .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '\n')
+    .replace(/\r/g, '')
+    .trim();
 
   // 4. Ensure header and footer are formatted correctly
   const header = '-----BEGIN PRIVATE KEY-----';
@@ -124,7 +129,7 @@ function normalizePrivateKey(rawKey) {
     const body = key
       .replace(header, '')
       .replace(footer, '')
-      .replace(/\s+/g, ''); // strip internal spaces/newlines
+      .replace(/[^A-Za-z0-9+/=]/g, ''); // strip unexpected chars safely
 
     // Reconstruct valid 64-char wrapped PEM
     const wrappedBody = body.match(/.{1,64}/g)?.join('\n') || body;
@@ -146,6 +151,16 @@ async function getGoogleAccessToken(clientEmail, rawPrivateKey) {
         return reject(new Error('FIREBASE_PRIVATE_KEY is empty or missing valid PEM header. Check your GitHub repository secrets.'));
       }
 
+      let privateKeyObject;
+      try {
+        privateKeyObject = crypto.createPrivateKey({
+          key: formattedKey,
+          format: 'pem'
+        });
+      } catch (pemErr) {
+        return reject(new Error(`FIREBASE_PRIVATE_KEY could not be parsed as a valid PEM private key. ${pemErr.message}`));
+      }
+
       const now = Math.floor(Date.now() / 1000);
       const header = { alg: 'RS256', typ: 'JWT' };
       const claimSet = {
@@ -163,7 +178,7 @@ async function getGoogleAccessToken(clientEmail, rawPrivateKey) {
       const sign = crypto.createSign('RSA-SHA256');
       sign.update(signatureInput);
       sign.end();
-      const signature = sign.sign(formattedKey, 'base64')
+      const signature = sign.sign(privateKeyObject, 'base64')
         .replace(/=/g, '')
         .replace(/\+/g, '-')
         .replace(/\//g, '_');
