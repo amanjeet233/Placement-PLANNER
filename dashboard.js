@@ -84,6 +84,8 @@ const DashboardApp = (() => {
     renderWeeklyHeatmap();
     renderWeeklyGoals();
 
+    // Ensure state is fully synced from PrepVault before creating charts
+    syncFromVault();
     initCharts();
 
     if (window.lucide) {
@@ -98,7 +100,6 @@ const DashboardApp = (() => {
       window.addEventListener('prep_vault_updated', () => {
         syncFromVault();
       });
-      syncFromVault();
     }
 
     window.addEventListener('resize', () => {
@@ -178,6 +179,19 @@ const DashboardApp = (() => {
     } catch (e) {
       console.warn('Dashboard state load error', e);
     }
+    // Eagerly sync all historical sleep logs from prep_vault_v1
+    try {
+      const rawVault = localStorage.getItem('prep_vault_v1');
+      if (rawVault) {
+        const pVault = JSON.parse(rawVault);
+        if (pVault && pVault.sleepLogs && typeof pVault.sleepLogs === 'object') {
+          Object.keys(pVault.sleepLogs).forEach(dStr => {
+            ensureDayRecord(dStr);
+            state.daily[dStr].sleep.hours = Number(pVault.sleepLogs[dStr]) || 0;
+          });
+        }
+      }
+    } catch (e) {}
   }
 
   function saveState() {
@@ -916,6 +930,7 @@ const DashboardApp = (() => {
     if (barChartInstance) {
       const pieData = getWeeklyPieData();
       barChartInstance.config._isEmpty = pieData.isEmpty;
+      barChartInstance.config._totalTasks = pieData.totalTasks;
       barChartInstance.data.labels = pieData.labels;
       barChartInstance.data.datasets[0].data = pieData.data;
       barChartInstance.data.datasets[0].backgroundColor = pieData.backgroundColor;
@@ -961,84 +976,37 @@ const DashboardApp = (() => {
     }
   }
 
-  // Custom Plugin: In-Slice Percentage & Outside Category Labels (Matching User Image Spec)
-  const pieSliceLabelsPlugin = {
-    id: 'pieSliceLabelsPlugin',
+  // Custom Plugin: Doughnut Center Metric (Displays Total Tasks Cleanly, Zero Text Overlaps)
+  const doughnutCenterTextPlugin = {
+    id: 'doughnutCenterTextPlugin',
     afterDraw(chart) {
+      if (chart.config.type !== 'doughnut') return;
       const { ctx, chartArea } = chart;
-      const dataset = chart.data.datasets[0];
-      if (!dataset || !dataset.data) return;
-
-      const meta = chart.getDatasetMeta(0);
-      if (!meta || !meta.data || meta.data.length === 0) return;
-
-      const total = dataset.data.reduce((sum, v) => sum + (Number(v) || 0), 0);
-      if (total === 0 || chart.config._isEmpty) {
-        ctx.save();
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        const cx = (chartArea.left + chartArea.right) / 2;
-        const cy = (chartArea.top + chartArea.bottom) / 2;
-        ctx.font = 'italic 700 10.5px "Plus Jakarta Sans", sans-serif';
-        ctx.fillStyle = '#94A3B8';
-        ctx.fillText('Pending tasks', cx, cy);
-        ctx.restore();
-        return;
-      }
+      if (!chartArea) return;
+      const total = chart.config._totalTasks || 0;
+      const cx = (chartArea.left + chartArea.right) / 2;
+      const cy = (chartArea.top + chartArea.bottom) / 2;
 
       ctx.save();
-      meta.data.forEach((arc, idx) => {
-        const val = Number(dataset.data[idx]) || 0;
-        if (val <= 0) return;
-
-        const pctNum = Math.round((val / total) * 100);
-        if (pctNum <= 0) return;
-
-        const startAngle = arc.startAngle;
-        const endAngle = arc.endAngle;
-        const angleSpan = endAngle - startAngle;
-        const midAngle = startAngle + angleSpan / 2;
-
-        const outerR = arc.outerRadius;
-        const cx = arc.x;
-        const cy = arc.y;
-
-        // 1. Draw In-Slice Percentage (Bold White, inside slice, matching user's image)
-        if (angleSpan > 0.32) {
-          const inRadius = outerR * 0.58;
-          const px = cx + Math.cos(midAngle) * inRadius;
-          const py = cy + Math.sin(midAngle) * inRadius;
-
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.font = 'bold 11px "Plus Jakarta Sans", sans-serif';
-          ctx.fillStyle = '#FFFFFF';
-          ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
-          ctx.shadowBlur = 3;
-          ctx.fillText(`${pctNum}%`, px, py);
-          ctx.shadowBlur = 0;
-        }
-
-        // 2. Draw Outside Category Label (Italic, matching user's image)
-        const labelText = chart.data.labels[idx] || '';
-        if (labelText && angleSpan > 0.22) {
-          const outRadius = outerR + 10;
-          const lx = cx + Math.cos(midAngle) * outRadius;
-          const ly = cy + Math.sin(midAngle) * outRadius;
-
-          const cosVal = Math.cos(midAngle);
-          ctx.textAlign = cosVal > 0.3 ? 'left' : (cosVal < -0.3 ? 'right' : 'center');
-          ctx.textBaseline = 'middle';
-          ctx.font = 'italic 600 10px "Plus Jakarta Sans", sans-serif';
-          ctx.fillStyle = '#1E293B';
-          ctx.fillText(labelText, lx, ly);
-        }
-      });
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      if (total === 0 || chart.config._isEmpty) {
+        ctx.font = 'bold 10.5px "Plus Jakarta Sans", sans-serif';
+        ctx.fillStyle = '#94A3B8';
+        ctx.fillText('0 Tasks', cx, cy);
+      } else {
+        ctx.font = '800 13px "JetBrains Mono", monospace';
+        ctx.fillStyle = '#0F172A';
+        ctx.fillText(`${total}`, cx, cy - 6);
+        ctx.font = '700 8.5px "Plus Jakarta Sans", sans-serif';
+        ctx.fillStyle = '#64748B';
+        ctx.fillText(total === 1 ? 'TASK' : 'TASKS', cx, cy + 8);
+      }
       ctx.restore();
     }
   };
 
-  // 1. Weekly Breakdown Solid Pie Chart
+  // 1. Weekly Breakdown Doughnut Chart
   function getWeeklyPieData() {
     const weekDays = getCurrentWeekDates();
     let dsaDone = 0, aptDone = 0, engDone = 0, gymDone = 0, revDone = 0;
@@ -1088,7 +1056,7 @@ const DashboardApp = (() => {
     const colors = ['#3B82F6', '#10B981', '#A855F7', '#FB7185', '#FBBF24'];
     const hoverColors = ['#2563EB', '#059669', '#9333EA', '#F43F5E', '#F59E0B'];
 
-    // If no tasks done yet, show subtle empty pie placeholder
+    // If no tasks done yet, show subtle empty doughnut placeholder
     if (totalTasks === 0) {
       return {
         labels: ['Pending Tasks'],
@@ -1119,24 +1087,25 @@ const DashboardApp = (() => {
     if (barChartInstance) barChartInstance.destroy();
 
     barChartInstance = new Chart(ctx, {
-      type: 'pie',
+      type: 'doughnut',
       data: {
         labels: pieData.labels,
         datasets: [{
           data: pieData.data,
           backgroundColor: pieData.backgroundColor,
           hoverBackgroundColor: pieData.hoverBackgroundColor,
-          borderWidth: 1.5,
+          borderWidth: 2,
           borderColor: '#FFFFFF',
           hoverOffset: 3
         }]
       },
-      plugins: [pieSliceLabelsPlugin],
+      plugins: [doughnutCenterTextPlugin],
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        cutout: '68%',
         layout: {
-          padding: 12
+          padding: 4
         },
         plugins: {
           legend: { display: false },
@@ -1159,9 +1128,10 @@ const DashboardApp = (() => {
       }
     });
     barChartInstance.config._isEmpty = pieData.isEmpty;
+    barChartInstance.config._totalTasks = pieData.totalTasks;
   }
 
-  // 2. Sleep Tracker Chart (100% Real Logs Sync)
+  // 2. Sleep Tracker Chart (100% Real Logs Sync Across All Past Days)
   function getSleepData() {
     const weekDays = getCurrentWeekDates();
     const todayStr = getTodayString();
@@ -1173,15 +1143,27 @@ const DashboardApp = (() => {
       return `${dayLetters[idx]}`;
     });
 
-    const vaultSleep = (window.PrepVault && window.PrepVault.get().sleepLogs) || {};
+    let vaultSleep = {};
+    if (window.PrepVault && typeof window.PrepVault.get === 'function') {
+      vaultSleep = window.PrepVault.get().sleepLogs || {};
+    }
+    if (Object.keys(vaultSleep).length === 0) {
+      try {
+        const raw = localStorage.getItem('prep_vault_v1');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && parsed.sleepLogs) vaultSleep = parsed.sleepLogs;
+        }
+      } catch (e) {}
+    }
 
     const hoursData = weekDays.map(dStr => {
-      if (vaultSleep[dStr] !== undefined) {
-        return Number(vaultSleep[dStr]) || 0;
+      if (vaultSleep[dStr] !== undefined && Number(vaultSleep[dStr]) >= 0) {
+        return Number(vaultSleep[dStr]);
       }
       const rec = state.daily[dStr];
       if (rec && rec.sleep && rec.sleep.hours !== undefined) {
-        return Number(rec.sleep.hours) || 0;
+        return Number(rec.sleep.hours);
       }
       return 0; // Real data: No fake numbers for unlogged days
     });
