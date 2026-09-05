@@ -100,23 +100,26 @@ function normalizePrivateKey(rawKey) {
   if (!rawKey || typeof rawKey !== 'string') return '';
   let key = rawKey.trim();
 
-  // 1. Strip surrounding wrapping quotes
+  // 1. Strip surrounding wrapping quotes (single or double)
   if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
     key = key.slice(1, -1).trim();
   }
 
-  // 2. Handle case where user accidentally pasted the entire service account JSON
-  if (key.startsWith('{') && key.includes('private_key')) {
+  // 2. Handle case where user pasted the entire service account JSON or key:value line
+  if (key.includes('private_key')) {
     try {
       const parsed = JSON.parse(key);
       if (parsed.private_key) key = String(parsed.private_key).trim();
-    } catch (e) { /* continue */ }
+    } catch (e) {
+      const m = key.match(/"private_key"\s*:\s*"([^"]+)"/);
+      if (m && m[1]) key = m[1].trim();
+    }
   }
 
-  // 3. Convert all variations of escaped newlines (\n, \\n, \\\n, etc.) to real newlines
-  key = key.replace(/\\+n/g, '\n').replace(/\r/g, '').trim();
+  // 3. Convert all variations of escaped newlines (\n, \\n, \\\n, etc.) and carriage returns
+  key = key.replace(/\\+n/g, '\n').replace(/\\+r/g, '').replace(/\r/g, '');
 
-  // 4. Ensure header and footer are formatted correctly (supporting PKCS#8 and PKCS#1)
+  // 4. Find PEM header and footer
   const pk8Header = '-----BEGIN PRIVATE KEY-----';
   const pk8Footer = '-----END PRIVATE KEY-----';
   const pk1Header = '-----BEGIN RSA PRIVATE KEY-----';
@@ -130,17 +133,26 @@ function normalizePrivateKey(rawKey) {
   } else if (key.includes(pk1Header) && key.includes(pk1Footer)) {
     header = pk1Header;
     footer = pk1Footer;
+  } else if (key.includes('BEGIN') && key.includes('END')) {
+    const hMatch = key.match(/-----BEGIN [A-Z ]+-----/);
+    const fMatch = key.match(/-----END [A-Z ]+-----/);
+    if (hMatch && fMatch) {
+      header = hMatch[0];
+      footer = fMatch[0];
+    }
   }
 
   if (header && footer) {
-    const body = key
-      .replace(header, '')
-      .replace(footer, '')
-      .replace(/\s+/g, ''); // strip internal spaces/newlines
-
-    // Reconstruct valid 64-char wrapped PEM
-    const wrappedBody = body.match(/.{1,64}/g)?.join('\n') || body;
-    return `${header}\n${wrappedBody}\n${footer}\n`;
+    const startIndex = key.indexOf(header) + header.length;
+    const endIndex = key.indexOf(footer);
+    if (endIndex > startIndex) {
+      const rawBody = key.substring(startIndex, endIndex);
+      // Strictly clean Base64 body: strip everything that is NOT A-Z, a-z, 0-9, +, /, or =
+      const cleanBody = rawBody.replace(/[^A-Za-z0-9+/=]/g, '');
+      // Format into standard 64-character PEM lines
+      const wrappedBody = cleanBody.match(/.{1,64}/g)?.join('\n') || cleanBody;
+      return `${header}\n${wrappedBody}\n${footer}\n`;
+    }
   }
 
   return key;
