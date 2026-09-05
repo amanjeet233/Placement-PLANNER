@@ -1184,14 +1184,6 @@
         </div>
       </div>
 
-      <!-- Honest Architecture & Reliability Disclosure -->
-      <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50/80 border border-amber-200 text-amber-900">
-        <i data-lucide="info" class="w-3.5 h-3.5 shrink-0 stroke-[2.2] text-amber-700"></i>
-        <p class="text-[9px] font-bold leading-relaxed">
-          <span class="font-black">Best reliability:</span> Keep the dashboard/PWA open or pinned. Local reminders are scheduled by the dashboard page. Background execution depends on browser and OS behavior.
-        </p>
-      </div>
-
       <!-- Reminder Cards List -->
       <div id="reminder-cards-list" class="flex flex-col gap-2">
         <!-- Rendered dynamically by ReminderUI.renderList() -->
@@ -1201,101 +1193,6 @@
           </div>
           <p class="text-[11px] font-bold text-slate-600">No reminders yet</p>
           <p class="text-[9.5px] text-slate-500">Add your first reminder to get started</p>
-        </div>
-      </div>
-
-      <!-- Real-Time Notification Diagnostics / Debug Panel -->
-      <div id="notif-diagnostics-card" class="rounded-xl p-3.5 bg-slate-50 border border-slate-200/90 text-slate-800 flex flex-col gap-2.5 mt-1 shadow-2xs">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <div class="w-6 h-6 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-700">
-              <i data-lucide="activity" class="w-3.5 h-3.5 stroke-[2.4]"></i>
-            </div>
-            <div>
-              <span class="text-[10px] font-black uppercase tracking-wider text-slate-900 block leading-tight">Notification Engine &amp; FCM Diagnostics</span>
-              <span class="text-[8.5px] font-bold text-slate-500 block leading-none mt-0.5">Live runtime verification (₹0 Spark Architecture)</span>
-            </div>
-          </div>
-          <div class="flex items-center gap-1.5">
-            <button onclick="ReminderUI.refreshDiagnostics()" title="Refresh diagnostic telemetry"
-              class="text-[9px] font-extrabold text-indigo-700 hover:text-indigo-900 flex items-center gap-1 cursor-pointer bg-white px-2 py-1 rounded-md border border-slate-200 shadow-2xs active:scale-95 transition-all">
-              <i data-lucide="refresh-cw" class="w-2.5 h-2.5 stroke-[2.2]"></i> Refresh Telemetry
-            </button>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[9px] font-bold">
-          <!-- 1. Permission -->
-          <div class="p-2 rounded-lg bg-white border border-slate-200 flex flex-col gap-0.5 shadow-2xs">
-            <span class="text-[7.5px] uppercase tracking-wider text-slate-500 font-extrabold">1. Permission</span>
-            <span id="diag-perm" class="font-black text-slate-900">Checking...</span>
-          </div>
-
-          <!-- 2. Service Worker -->
-          <div class="p-2 rounded-lg bg-white border border-slate-200 flex flex-col gap-0.5 shadow-2xs">
-            <span class="text-[7.5px] uppercase tracking-wider text-slate-500 font-extrabold">2. Service Worker</span>
-            <span id="diag-sw" class="font-black text-slate-900">Checking...</span>
-          </div>
-
-          <!-- 3. Firebase SDK -->
-          <div class="p-2 rounded-lg bg-white border border-slate-200 flex flex-col gap-0.5 shadow-2xs">
-            <span class="text-[7.5px] uppercase tracking-wider text-slate-500 font-extrabold">3. Firebase Initialized</span>
-            <span id="diag-fb-init" class="font-black text-slate-900">Checking...</span>
-          </div>
-
-          <!-- 4. FCM Module -->
-          <div class="p-2 rounded-lg bg-white border border-slate-200 flex flex-col gap-0.5 shadow-2xs">
-            <span class="text-[7.5px] uppercase tracking-wider text-slate-500 font-extrabold">4. FCM Initialized</span>
-            <span id="diag-fcm-init" class="font-black text-slate-900">Checking...</span>
-          </div>
-
-          <!-- 5. Push Support -->
-          <div class="p-2 rounded-lg bg-white border border-slate-200 flex flex-col gap-0.5 shadow-2xs">
-            <span class="text-[7.5px] uppercase tracking-wider text-slate-500 font-extrabold">5. Web Push Support</span>
-            <span id="diag-push-support" class="font-black text-slate-900">Checking...</span>
-          </div>
-
-          <!-- 6. Local Scheduler -->
-          <div class="p-2 rounded-lg bg-white border border-slate-200 flex flex-col gap-0.5 shadow-2xs">
-            <span class="text-[7.5px] uppercase tracking-wider text-slate-500 font-extrabold">6. Local Scheduler</span>
-            <span id="diag-scheduler" class="font-black text-emerald-700">Exact Timer + 30s</span>
-          </div>
-
-          <!-- 7. Last Push Received -->
-          <div class="p-2 rounded-lg bg-white border border-slate-200 flex flex-col gap-0.5 shadow-2xs">
-            <span class="text-[7.5px] uppercase tracking-wider text-slate-500 font-extrabold">7. Last Push Received</span>
-            <span id="diag-last-push" class="font-black text-slate-700">None</span>
-          </div>
-
-          <!-- 8. FCM Config Status -->
-          <div class="p-2 rounded-lg bg-white border border-slate-200 flex flex-col gap-0.5 shadow-2xs">
-            <span class="text-[7.5px] uppercase tracking-wider text-slate-500 font-extrabold">8. FCM Status</span>
-            <span id="diag-fcm" class="font-black text-slate-900">Checking...</span>
-          </div>
-        </div>
-
-        <!-- 9. FCM Token Strip with Generate & Copy Buttons -->
-        <div class="p-2 rounded-lg bg-white border border-slate-200 flex items-center justify-between gap-2 shadow-2xs flex-wrap">
-          <div class="flex items-center gap-1.5 min-w-0 flex-1">
-            <span class="text-[7.5px] uppercase tracking-wider text-slate-500 font-extrabold shrink-0">FCM Token:</span>
-            <span id="diag-fcm-token-val" class="font-mono text-[9px] font-bold text-slate-800 truncate select-all">Not Generated</span>
-          </div>
-          <div class="flex items-center gap-1.5 shrink-0">
-            <button id="btn-gen-fcm-token" onclick="ReminderUI.generateFcmToken()"
-              class="px-2 py-0.5 rounded bg-violet-50 hover:bg-violet-100 border border-violet-200 text-violet-700 text-[8.5px] font-black cursor-pointer active:scale-95 transition-all">
-              ⚡ Generate Token
-            </button>
-            <button id="btn-copy-fcm-token" onclick="ReminderUI.copyFcmToken()"
-              class="px-2 py-0.5 rounded bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 text-[8.5px] font-black cursor-pointer active:scale-95 transition-all">
-              Copy Token
-            </button>
-          </div>
-        </div>
-
-        <!-- Attempt & Status Strip -->
-        <div class="flex items-center justify-between text-[8.5px] font-semibold text-slate-600 pt-1 border-t border-slate-200 flex-wrap gap-1">
-          <span id="diag-last-attempt">Last notification attempt: Never</span>
-          <span id="diag-last-status" class="font-bold text-slate-800">Status: Idle</span>
         </div>
       </div>
 
@@ -1648,6 +1545,114 @@
       </div>
     </section>
 
+    <!-- ================================================================= -->
+    <!-- 6. SYSTEM DIAGNOSTICS & FCM ENGINE TELEMETRY (COLLAPSIBLE DRAWER) -->
+    <!-- ================================================================= -->
+    <section class="mt-1">
+      <details id="notif-diagnostics-card" class="group bento-card bg-slate-50/90 border border-slate-200/90 rounded-xl overflow-hidden shadow-2xs transition-all">
+        <summary class="flex items-center justify-between p-3.5 cursor-pointer select-none hover:bg-slate-100/70 transition-colors list-none">
+          <div class="flex items-center gap-2.5">
+            <div class="w-7 h-7 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-700 shadow-2xs shrink-0">
+              <i data-lucide="activity" class="w-3.5 h-3.5 stroke-[2.4]"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-[11px] font-black text-slate-900 tracking-tight">Notification Engine &amp; FCM Diagnostics</span>
+                <span class="px-1.5 py-0.2 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-[8px] font-extrabold">Telemetry</span>
+              </div>
+              <p class="text-[9px] font-bold text-slate-500 leading-tight mt-0.5">Live runtime verification • Web Push &amp; Local Scheduler</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="event.stopPropagation(); ReminderUI.refreshDiagnostics()" title="Refresh diagnostic telemetry"
+              class="text-[9px] font-extrabold text-indigo-700 hover:text-indigo-900 flex items-center gap-1 cursor-pointer bg-white px-2.5 py-1 rounded-md border border-slate-200 shadow-2xs active:scale-95 transition-all">
+              <i data-lucide="refresh-cw" class="w-2.5 h-2.5 stroke-[2.2]"></i> Refresh Telemetry
+            </button>
+            <div class="w-6 h-6 rounded-lg bg-slate-200/60 flex items-center justify-center text-slate-600 group-open:rotate-180 transition-transform">
+              <i data-lucide="chevron-down" class="w-3.5 h-3.5 stroke-[2.5]"></i>
+            </div>
+          </div>
+        </summary>
+
+        <div class="p-3.5 pt-2 border-t border-slate-200 flex flex-col gap-2.5 bg-slate-50/50">
+          <!-- 8 Grid Telemetry Boxes -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[9px] font-bold">
+            <!-- 1. Permission -->
+            <div class="p-2 rounded-lg bg-white border border-slate-200 flex flex-col gap-0.5 shadow-2xs">
+              <span class="text-[7.5px] uppercase tracking-wider text-slate-500 font-extrabold">1. Permission</span>
+              <span id="diag-perm" class="font-black text-slate-900">Checking...</span>
+            </div>
+
+            <!-- 2. Service Worker -->
+            <div class="p-2 rounded-lg bg-white border border-slate-200 flex flex-col gap-0.5 shadow-2xs">
+              <span class="text-[7.5px] uppercase tracking-wider text-slate-500 font-extrabold">2. Service Worker</span>
+              <span id="diag-sw" class="font-black text-slate-900">Checking...</span>
+            </div>
+
+            <!-- 3. Firebase SDK -->
+            <div class="p-2 rounded-lg bg-white border border-slate-200 flex flex-col gap-0.5 shadow-2xs">
+              <span class="text-[7.5px] uppercase tracking-wider text-slate-500 font-extrabold">3. Firebase Initialized</span>
+              <span id="diag-fb-init" class="font-black text-slate-900">Checking...</span>
+            </div>
+
+            <!-- 4. FCM Module -->
+            <div class="p-2 rounded-lg bg-white border border-slate-200 flex flex-col gap-0.5 shadow-2xs">
+              <span class="text-[7.5px] uppercase tracking-wider text-slate-500 font-extrabold">4. FCM Initialized</span>
+              <span id="diag-fcm-init" class="font-black text-slate-900">Checking...</span>
+            </div>
+
+            <!-- 5. Push Support -->
+            <div class="p-2 rounded-lg bg-white border border-slate-200 flex flex-col gap-0.5 shadow-2xs">
+              <span class="text-[7.5px] uppercase tracking-wider text-slate-500 font-extrabold">5. Web Push Support</span>
+              <span id="diag-push-support" class="font-black text-slate-900">Checking...</span>
+            </div>
+
+            <!-- 6. Local Scheduler -->
+            <div class="p-2 rounded-lg bg-white border border-slate-200 flex flex-col gap-0.5 shadow-2xs">
+              <span class="text-[7.5px] uppercase tracking-wider text-slate-500 font-extrabold">6. Local Scheduler</span>
+              <span id="diag-scheduler" class="font-black text-emerald-700">Exact Timer + 30s</span>
+            </div>
+
+            <!-- 7. Last Push Received -->
+            <div class="p-2 rounded-lg bg-white border border-slate-200 flex flex-col gap-0.5 shadow-2xs">
+              <span class="text-[7.5px] uppercase tracking-wider text-slate-500 font-extrabold">7. Last Push Received</span>
+              <span id="diag-last-push" class="font-black text-slate-700">None</span>
+            </div>
+
+            <!-- 8. FCM Config Status -->
+            <div class="p-2 rounded-lg bg-white border border-slate-200 flex flex-col gap-0.5 shadow-2xs">
+              <span class="text-[7.5px] uppercase tracking-wider text-slate-500 font-extrabold">8. FCM Status</span>
+              <span id="diag-fcm" class="font-black text-slate-900">Checking...</span>
+            </div>
+          </div>
+
+          <!-- 9. FCM Token Strip with Generate & Copy Buttons -->
+          <div class="p-2.5 rounded-lg bg-white border border-slate-200 flex items-center justify-between gap-2 shadow-2xs flex-wrap">
+            <div class="flex items-center gap-1.5 min-w-0 flex-1">
+              <span class="text-[7.5px] uppercase tracking-wider text-slate-500 font-extrabold shrink-0">FCM Token:</span>
+              <span id="diag-fcm-token-val" class="font-mono text-[9px] font-bold text-slate-800 truncate select-all">Not Generated</span>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <button id="btn-gen-fcm-token" onclick="ReminderUI.generateFcmToken()"
+                class="px-2.5 py-1 rounded bg-violet-50 hover:bg-violet-100 border border-violet-200 text-violet-700 text-[8.5px] font-black cursor-pointer active:scale-95 transition-all">
+                ⚡ Generate Token
+              </button>
+              <button id="btn-copy-fcm-token" onclick="ReminderUI.copyFcmToken()"
+                class="px-2.5 py-1 rounded bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 text-[8.5px] font-black cursor-pointer active:scale-95 transition-all">
+                Copy Token
+              </button>
+            </div>
+          </div>
+
+          <!-- Attempt & Status Strip -->
+          <div class="flex items-center justify-between text-[8.5px] font-semibold text-slate-600 pt-1 border-t border-slate-200 flex-wrap gap-1">
+            <span id="diag-last-attempt">Last notification attempt: Never</span>
+            <span id="diag-last-status" class="font-bold text-slate-800">Status: Idle</span>
+          </div>
+        </div>
+      </details>
+    </section>
+
   </main>
 
   <!-- ================================================================= -->
@@ -1986,7 +1991,7 @@
 
       sorted.forEach(reminder => {
         const card = document.createElement('div');
-        card.className = `reminder-card p-3 ${!reminder.enabled ? 'reminder-disabled' : ''}`;
+        card.className = `reminder-card p-3 sm:p-3.5 ${!reminder.enabled ? 'reminder-disabled' : ''}`;
         card.id = `reminder-card-${reminder.id}`;
 
         const time12 = ReminderEngine.formatTime12h(reminder.time);
@@ -2006,44 +2011,47 @@
         let nextTimeSubHtml = '';
 
         if (!reminder.enabled) {
-          statusBadgeHtml = '<span class="text-[9px] font-black text-slate-400 px-1.5 py-0.5 rounded-md bg-slate-100 border border-slate-200">OFF</span>';
+          statusBadgeHtml = '<span class="text-[8.5px] font-black text-slate-400 px-1.5 py-0.5 rounded-md bg-slate-100 border border-slate-200">OFF</span>';
           nextTimeSubHtml = '<span class="text-[8.5px] font-bold text-slate-400">Disabled</span>';
         } else if (nextOcc) {
           if (nextOcc.deliveredToday) {
-            statusBadgeHtml = `<span class="inline-flex items-center gap-1 text-[9px] font-black px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-900 border border-emerald-300 shadow-2xs"><i data-lucide="check" class="w-2.5 h-2.5 stroke-[3] text-emerald-700"></i> Done today • Next ${nextOcc.relativeTime}</span>`;
-            nextTimeSubHtml = `<span class="text-[8.5px] font-black text-emerald-800">Done for today • Next trigger: ${nextOcc.time12} (${nextOcc.relativeTime})</span>`;
+            statusBadgeHtml = `<span class="inline-flex items-center gap-1 text-[8.5px] font-black px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-2xs"><i data-lucide="check" class="w-2.5 h-2.5 stroke-[3] text-emerald-600"></i> Done today • Next ${nextOcc.relativeTime}</span>`;
+            nextTimeSubHtml = `<span class="text-[8.5px] font-black text-emerald-700">Done for today • Next trigger: ${nextOcc.time12} (${nextOcc.relativeTime})</span>`;
           } else {
-            statusBadgeHtml = `<span class="inline-flex items-center gap-1 text-[9px] font-black px-2 py-0.5 rounded-md bg-violet-100 text-violet-900 border border-violet-300 shadow-2xs"><i data-lucide="clock" class="w-2.5 h-2.5 stroke-[2.5] text-violet-700"></i> Next ${nextOcc.relativeTime}</span>`;
-            nextTimeSubHtml = `<span class="text-[8.5px] font-black text-violet-800">Scheduled: ${nextOcc.time12} (${nextOcc.relativeTime})</span>`;
+            statusBadgeHtml = `<span class="inline-flex items-center gap-1 text-[8.5px] font-black px-2 py-0.5 rounded-full bg-violet-50 text-violet-800 border border-violet-200 shadow-2xs"><i data-lucide="clock" class="w-2.5 h-2.5 stroke-[2.5] text-violet-600"></i> Next ${nextOcc.relativeTime}</span>`;
+            nextTimeSubHtml = `<span class="text-[8.5px] font-black text-violet-700">Scheduled: ${nextOcc.time12} (${nextOcc.relativeTime})</span>`;
           }
         }
 
         card.innerHTML = `
-          <div class="flex items-start gap-3">
-            <!-- Time Column -->
-            <div class="flex flex-col items-center shrink-0 w-16">
-              <span class="text-[13px] font-black font-mono text-slate-950 leading-none">${time12.split(' ')[0]}</span>
-              <span class="text-[9px] font-black text-slate-600 uppercase tracking-wider">${time12.split(' ')[1] || ''}</span>
-            </div>
-
-            <!-- Content Column -->
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2 flex-wrap">
-                <span class="text-[12px] font-black text-slate-950">${escapeHtml(reminder.title)}</span>
-                ${statusBadgeHtml}
+          <div class="flex items-center justify-between gap-3">
+            <!-- Time Column & Content -->
+            <div class="flex items-center gap-3 min-w-0 flex-1">
+              <!-- Time Tile -->
+              <div class="flex flex-col items-center justify-center shrink-0 w-14 sm:w-16 py-1 px-1.5 rounded-lg bg-slate-50 border border-slate-200/90 shadow-2xs">
+                <span class="text-[13px] sm:text-[14px] font-black font-mono text-slate-950 leading-none">${time12.split(' ')[0]}</span>
+                <span class="text-[8.5px] font-black text-indigo-700 uppercase tracking-wider mt-0.5">${time12.split(' ')[1] || ''}</span>
               </div>
-              ${reminder.message ? `<p class="text-[10px] text-slate-600 font-semibold mt-0.5 truncate">${escapeHtml(reminder.message)}</p>` : ''}
-              <div class="flex items-center gap-2 mt-1 flex-wrap">
-                <div class="flex items-center gap-1">
-                  <i data-lucide="repeat" class="w-3 h-3 text-violet-600 stroke-[2.2] shrink-0"></i>
-                  <span class="text-[9px] font-bold text-slate-600">${repeatLabel}</span>
+
+              <!-- Content Column -->
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="text-[12px] sm:text-[13px] font-black text-slate-950 tracking-tight leading-snug">${escapeHtml(reminder.title)}</span>
+                  ${statusBadgeHtml}
                 </div>
-                ${nextTimeSubHtml ? `<span class="text-slate-300 text-[9px]">•</span>${nextTimeSubHtml}` : ''}
+                ${reminder.message ? `<p class="text-[10px] text-slate-600 font-semibold mt-0.5 truncate">${escapeHtml(reminder.message)}</p>` : ''}
+                <div class="flex items-center gap-2 mt-1 flex-wrap">
+                  <div class="flex items-center gap-1 text-[9px] font-bold text-slate-500">
+                    <i data-lucide="repeat" class="w-3 h-3 text-indigo-600 stroke-[2.2] shrink-0"></i>
+                    <span>${repeatLabel}</span>
+                  </div>
+                  ${nextTimeSubHtml ? `<span class="text-slate-300 text-[9px]">•</span>${nextTimeSubHtml}` : ''}
+                </div>
               </div>
             </div>
 
             <!-- Action Column -->
-            <div class="flex items-center gap-1.5 shrink-0">
+            <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
               <!-- Toggle -->
               <label class="toggle-switch" title="${reminder.enabled ? 'Disable' : 'Enable'} reminder"
                 aria-label="${reminder.enabled ? 'Disable' : 'Enable'} ${escapeHtml(reminder.title)} reminder">
@@ -2056,14 +2064,14 @@
               <button onclick="ReminderUI.openModal('${reminder.id}')"
                 title="Edit ${escapeHtml(reminder.title)}"
                 aria-label="Edit reminder: ${escapeHtml(reminder.title)}"
-                class="w-7 h-7 rounded-lg bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 flex items-center justify-center transition-all cursor-pointer active:scale-90">
+                class="w-7 h-7 rounded-lg bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 text-slate-600 hover:text-indigo-700 flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-2xs">
                 <i data-lucide="pencil" class="w-3 h-3 stroke-[2.2]"></i>
               </button>
               <!-- Delete -->
               <button onclick="ReminderUI.deleteReminder('${reminder.id}', '${escapeHtml(reminder.title)}')"
                 title="Delete ${escapeHtml(reminder.title)}"
                 aria-label="Delete reminder: ${escapeHtml(reminder.title)}"
-                class="w-7 h-7 rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 flex items-center justify-center transition-all cursor-pointer active:scale-90">
+                class="w-7 h-7 rounded-lg bg-slate-50 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 text-slate-500 hover:text-rose-600 flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-2xs">
                 <i data-lucide="trash-2" class="w-3 h-3 stroke-[2.2]"></i>
               </button>
             </div>
