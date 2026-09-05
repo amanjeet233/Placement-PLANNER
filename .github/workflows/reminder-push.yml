@@ -1,0 +1,59 @@
+name: Placement Reminder Push (FCM HTTP v1)
+
+on:
+  # Scheduled Cron: Runs every 15 minutes (Free GitHub Actions tier)
+  schedule:
+    - cron: '*/15 * * * *'
+
+  # Manual Dispatch: Allows instant testing directly from GitHub UI
+  workflow_dispatch:
+    inputs:
+      force_test:
+        description: 'Force immediate test push regardless of scheduled time'
+        required: true
+        type: boolean
+        default: true
+      test_title:
+        description: 'Notification Title for Test'
+        required: false
+        type: string
+        default: 'CodeTrack 360 Action Test'
+      test_message:
+        description: 'Notification Message for Test'
+        required: false
+        type: string
+        default: 'Real FCM HTTP v1 Push delivered via GitHub Actions!'
+      custom_token:
+        description: 'Optional: Custom Device FCM Token (leave blank to use secret)'
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  dispatch-fcm-reminders:
+    name: Dispatch Scheduled & Manual Push
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Execute FCM HTTP v1 Push Sender
+        env:
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_CLIENT_EMAIL: ${{ secrets.FIREBASE_CLIENT_EMAIL }}
+          FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
+          FCM_DEVICE_TOKEN: ${{ secrets.FCM_DEVICE_TOKEN }}
+          REMINDERS_JSON: ${{ secrets.REMINDERS_JSON }}
+          INPUT_FORCE_TEST: ${{ inputs.force_test }}
+          INPUT_TEST_TITLE: ${{ inputs.test_title }}
+          INPUT_TEST_MESSAGE: ${{ inputs.test_message }}
+          INPUT_CUSTOM_TOKEN: ${{ inputs.custom_token }}
+        run: |
+          node scripts/send-fcm-reminders.js

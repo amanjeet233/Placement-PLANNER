@@ -1,0 +1,23 @@
+{
+  "name": "placement-planner",
+  "version": "2.0.0",
+  "description": "119-Day Placement Preparation Portal with DSA, Quantitative Aptitude, Executive Dashboard, and Scheduled FCM Push Notifications.",
+  "main": "scripts/send-fcm-reminders.js",
+  "scripts": {
+    "start": "npx serve .",
+    "test": "node scratch/test_fcm_http_v1_cron.js && node scratch/test_fcm_notification_integration.js && node scratch/test_dashboard_roadmap_integration.js",
+    "test:fcm": "node scratch/test_fcm_http_v1_cron.js",
+    "fcm:send": "node scripts/send-fcm-reminders.js"
+  },
+  "keywords": [
+    "placement-prep",
+    "dsa",
+    "aptitude",
+    "pwa",
+    "fcm",
+    "push-notifications",
+    "github-actions"
+  ],
+  "author": "CodeTrack 360",
+  "license": "MIT"
+}

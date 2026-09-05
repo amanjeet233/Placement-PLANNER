@@ -1,0 +1,16 @@
+# Dependency directories
+node_modules/
+
+# Environment and Secret keys (Never commit service-account credentials)
+*firebase-adminsdk*.json
+service-account*.json
+*.pem
+*.key
+.env*
+
+# Logs & temp
+*.log
+npm-debug.log*
+
+# Scratch directory (automated tests)
+scratch/
