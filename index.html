@@ -21,6 +21,7 @@
         try {
           const reg = await navigator.serviceWorker.register('./service-worker.js', { scope: './' });
           window._swReg = reg;
+          reg.update(); // Force immediate cache update
           console.log('[PWA] Service Worker registered. Scope:', reg.scope);
         } catch (e) {
           console.warn('[PWA] Service Worker registration failed:', e);
