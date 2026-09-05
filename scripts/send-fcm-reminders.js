@@ -94,18 +94,62 @@ function base64UrlEncode(str) {
 }
 
 /**
+ * Normalizes and repairs any malformed Firebase Private Key string from environment secrets
+ */
+function normalizePrivateKey(rawKey) {
+  if (!rawKey || typeof rawKey !== 'string') return '';
+  let key = rawKey.trim();
+
+  // 1. Handle case where user accidentally pasted the entire service account JSON
+  if (key.startsWith('{') && key.includes('private_key')) {
+    try {
+      const parsed = JSON.parse(key);
+      if (parsed.private_key) key = parsed.private_key.trim();
+    } catch (e) { /* continue */ }
+  }
+
+  // 2. Strip surrounding wrapping quotes
+  if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
+    key = key.slice(1, -1).trim();
+  }
+
+  // 3. Convert all variations of escaped newlines (\\n, \\\n, etc.) to real newlines
+  key = key.replace(/\\+n/g, '\n').replace(/\r/g, '').trim();
+
+  // 4. Ensure header and footer are formatted correctly
+  const header = '-----BEGIN PRIVATE KEY-----';
+  const footer = '-----END PRIVATE KEY-----';
+
+  if (key.includes(header) && key.includes(footer)) {
+    const body = key
+      .replace(header, '')
+      .replace(footer, '')
+      .replace(/\s+/g, ''); // strip internal spaces/newlines
+
+    // Reconstruct valid 64-char wrapped PEM
+    const wrappedBody = body.match(/.{1,64}/g)?.join('\n') || body;
+    return `${header}\n${wrappedBody}\n${footer}\n`;
+  }
+
+  return key;
+}
+
+/**
  * Creates a signed Google OAuth2 JWT and exchanges it for an access token
  */
-async function getGoogleAccessToken(clientEmail, privateKey) {
+async function getGoogleAccessToken(clientEmail, rawPrivateKey) {
   return new Promise((resolve, reject) => {
     try {
-      // Normalize escaped newlines from environment variable
-      const formattedKey = privateKey.replace(/\\n/g, '\n');
+      const formattedKey = normalizePrivateKey(rawPrivateKey);
+
+      if (!formattedKey || !formattedKey.includes('-----BEGIN PRIVATE KEY-----')) {
+        return reject(new Error('FIREBASE_PRIVATE_KEY is empty or missing valid PEM header. Check your GitHub repository secrets.'));
+      }
 
       const now = Math.floor(Date.now() / 1000);
       const header = { alg: 'RS256', typ: 'JWT' };
       const claimSet = {
-        iss: clientEmail,
+        iss: clientEmail.trim(),
         scope: 'https://www.googleapis.com/auth/firebase.messaging',
         aud: 'https://oauth2.googleapis.com/token',
         exp: now + 3600,
