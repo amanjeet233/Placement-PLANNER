@@ -1,21 +1,26 @@
 <div align="center">
 
 # 🚀 CodeTrack 360 PRO
+
 ### *Engineering Placement + DSA Mastery + Quantitative Aptitude + Productivity Command Center*
 
 [![Deploy to GitHub Pages](https://github.com/amanjeet233/Placement-PLANNER/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/amanjeet233/Placement-PLANNER/actions/workflows/deploy-pages.yml)
 [![Placement Reminder Push](https://github.com/amanjeet233/Placement-PLANNER/actions/workflows/reminder-push.yml/badge.svg)](https://github.com/amanjeet233/Placement-PLANNER/actions/workflows/reminder-push.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![PWA Ready](https://img.shields.io/badge/PWA-100%25%20Offline%20Ready-6366F1.svg)](https://amanjeet233.github.io/Placement-PLANNER/)
+[![PWA Ready](https://img.shields.io/badge/PWA-Installable-6366F1.svg)](https://amanjeet233.github.io/Placement-PLANNER/)
 [![Firebase Firestore](https://img.shields.io/badge/Cloud%20Sync-Firebase%20Firestore-FFCA28?logo=firebase&logoColor=black)](https://firebase.google.com/)
+[![FCM Push](https://img.shields.io/badge/Push-FCM%20HTTP%20v1-FF6B6B?logo=firebase&logoColor=white)](https://firebase.google.com/docs/cloud-messaging)
 [![Cost: ₹0 Free Tier](https://img.shields.io/badge/Cost-₹0%20%2F%20100%25%20Free-22C55E.svg)](https://github.com/amanjeet233/Placement-PLANNER)
 [![Node.js](https://img.shields.io/badge/Node.js-v20%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![JavaScript](https://img.shields.io/badge/JavaScript-ES6%2B-F7DF1E?logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
+[![HTML5](https://img.shields.io/badge/HTML5-E34F26?logo=html5&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/HTML)
+[![CSS3](https://img.shields.io/badge/CSS3-1572B6?logo=css3&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/CSS)
 
 <p align="center">
   A production-grade, zero-cost (₹0) Placement & Competitive Exam Command Center uniting a <b>119-Day Structured Roadmap</b>, <b>337 DSA Placement Topics</b>, <b>24 Quantitative Aptitude Chapters</b>, <b>Automated FCM HTTP v1 Push Reminders via GitHub Actions Cron</b>, and <b>Real-Time Multi-Device Cloud Sync</b>.
 </p>
 
-[**🌐 Open Live Portal**](https://amanjeet233.github.io/Placement-PLANNER/) • [**🗺️ 119-Day Table Blueprint**](https://amanjeet233.github.io/Placement-PLANNER/roadmap.html) • [**⚡ Quick Start**](#-quick-start) • [**🤖 AI Master Prompt**](#-master-prompt-generate-custom-roadmaps-for-any-student) • [**⭐ Star on GitHub**](https://github.com/amanjeet233/Placement-PLANNER)
+[**🌐 Live Demo**](https://amanjeet233.github.io/Placement-PLANNER/) • [**🗺️ 119-Day Blueprint**](https://amanjeet233.github.io/Placement-PLANNER/roadmap.html) • [**⚡ Quick Start**](#-quick-start) • [**🤖 AI Master Prompt**](#-master-prompt-generate-custom-roadmaps-for-any-student) • [**⭐ Star on GitHub**](https://github.com/amanjeet233/Placement-PLANNER)
 
 </div>
 
@@ -27,10 +32,10 @@ Experience the full interactive command center directly in your browser:
 
 | Resource | Link | Description |
 | :--- | :--- | :--- |
-| **🚀 Live Command Center (Default)** | [`amanjeet233.github.io/Placement-PLANNER/`](https://amanjeet233.github.io/Placement-PLANNER/) | Full interactive dashboard, habit steppers, real-time analytics & FCM setup |
-| **🗺️ 119-Day Table Blueprint** | [`/roadmap.html`](https://amanjeet233.github.io/Placement-PLANNER/roadmap.html) | Complete 17-week phase-by-phase static curriculum and task matrix |
-| **📁 Source Code Repository** | [`github.com/amanjeet233/Placement-PLANNER`](https://github.com/amanjeet233/Placement-PLANNER) | Open-source GitHub repository with automated test suites & workflows |
-| **📖 Deployment & FCM Guide** | [`SETUP.md`](./SETUP.md) | Step-by-step documentation for Firebase setup and GitHub Actions secrets |
+| **🚀 Live Command Center** | [`amanjeet233.github.io/Placement-PLANNER/`](https://amanjeet233.github.io/Placement-PLANNER/) | Full interactive dashboard, habit steppers, real-time analytics & FCM setup |
+| **🗺️ 119-Day Blueprint** | [`/roadmap.html`](https://amanjeet233.github.io/Placement-PLANNER/roadmap.html) | Complete 17-week phase-by-phase static curriculum and task matrix |
+| **📁 Source Code** | [`github.com/amanjeet233/Placement-PLANNER`](https://github.com/amanjeet233/Placement-PLANNER) | Open-source GitHub repository with automated test suites & workflows |
+| **📖 Setup Guide** | [`SETUP.md`](./SETUP.md) | Step-by-step documentation for Firebase setup and GitHub Actions secrets |
 
 ---
 
@@ -97,7 +102,7 @@ Most students and job-seekers manage their placement preparation in a fragmented
 
 ### 🧩 2. 337 DSA Placement Topics (`dsa_roadmap_337_data.js`)
 - **Striver SDE Sheet & CTO Bhaiya Alignment**: Complete coverage across Arrays, Strings, Two Pointers, Linked Lists, Binary Search, Trees, BST, Graphs, Dynamic Programming, and Tries.
-- **Problem Deduplication Engine**: Detects and accounts for overlapping LeetCode questions across multiple topics (~243 unique problem URLs).
+- **Problem Deduplication Engine**: Detects and accounts for overlapping LeetCode questions across multiple topics (244 unique problem URLs from 388 total references).
 - **Instant Practice Links**: One-click direct URLs to LeetCode problem statements and topic conceptual breakdowns.
 
 ### 📊 3. 24 Quantitative Aptitude Chapters (`aptitude_roadmap_24_data.js`)
@@ -127,7 +132,7 @@ Most students and job-seekers manage their placement preparation in a fragmented
 
 ### 📱 8. Progressive Web App (PWA)
 - **Installable Native Experience**: Add to home screen on Android, iOS, Windows, and macOS.
-- **Service Worker v3.1**: Intelligent stale-while-revalidate caching for instant, zero-latency loading.
+- **Service Worker v2.0**: Intelligent stale-while-revalidate caching for instant, zero-latency loading.
 
 ---
 
@@ -138,7 +143,7 @@ flowchart TD
     subgraph Client["📱 User Client (Browser / PWA)"]
         UI["CodeTrack 360 Dashboard\n(index.html / dashboard.html)"]
         State["Unified State Engine\n(prep-sync.js / localStorage)"]
-        SW["Service Worker v3.1\n(service-worker.js)"]
+        SW["Service Worker v2.0\n(service-worker.js)"]
         FCM_SW["Firebase Messaging SW\n(firebase-messaging-sw.js)"]
         CloudClient["Firestore Sync Engine\n(firebase-firestore-sync.js)"]
     end
@@ -184,7 +189,7 @@ CodeTrack 360 utilizes a **three-tier notification hierarchy** to balance batter
 │                                                                                        │
 │  Layer 3: GitHub Actions FCM HTTP v1 Dispatcher (Browser Closed)                       │
 │  • Scheduled workflow evaluates reminders in Asia/Kolkata (IST) timezone.              │
-│  • Google Cloud OAuth2 generates access tokens to dispatch real FCM HTTP v1 messages.   │
+│  • Google Cloud OAuth2 generates access tokens to dispatch real FCM HTTP v1 messages.  │
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -293,7 +298,7 @@ Want to adapt this platform for a custom preparation goal? Copy and paste this *
 ```markdown
 # UNIVERSAL PLACEMENT PLANNER & ROADMAP GENERATOR PROMPT
 
-You are an expert Technical Interview Coach and Senior Curriculum Architect. 
+You are an expert Technical Interview Coach and Senior Curriculum Architect.
 Your task is to generate a comprehensive, structured placement dataset tailored to my target goals, timeline, and tech stack, formatted to integrate directly into the CodeTrack 360 / Placement-PLANNER architecture.
 
 ## MY PROFILE & GOALS:
@@ -392,19 +397,19 @@ Make the plan realistic, intense, and structured for maximum retention with zero
 
 ---
 
-## 🧪 Automated Testing & Validation
+## 🧪 Development & Testing
 
-CodeTrack 360 includes comprehensive automated test suites to ensure zero regressions across timezone conversions, OAuth2 key normalizers, and state synchronization:
+CodeTrack 360 can be run locally without any build process:
 
 ```bash
-# Run the complete test suite
-npm test
+# Using Python 3 built-in HTTP server
+python -m http.server 5500
+
+# Or using Node.js npx serve
+npx serve .
 ```
 
-### Test Suite Coverage:
-- `scratch/test_fcm_http_v1_cron.js`: Validates GitHub Actions workflow configurations, IST timezone conversions, RS256 JWT key normalization, and reminder schedule filters.
-- `scratch/test_fcm_notification_integration.js`: Audits Firebase config validity, FCM diagnostics telemetry, background push deserialization, and Service Worker handlers.
-- `scratch/test_dashboard_roadmap_integration.js`: Tests 337 DSA topic deduplication, 24 Aptitude chapter tracking, calendar streak arithmetic, and Master Backup roundtrip restoration.
+For GitHub Actions testing, you can manually trigger the FCM push workflow from the Actions tab to verify notification delivery.
 
 ---
 
@@ -421,7 +426,7 @@ Placement-PLANNER/
 ├── firebase-config.js             # Public Firebase Web App & VAPID Configuration
 ├── firebase-firestore-sync.js     # Real-Time Bi-Directional Cloud Sync Engine
 ├── firebase-messaging-sw.js       # Background FCM Service Worker Handler
-├── service-worker.js              # PWA Offline Caching & Notification Handler (v3.1)
+├── service-worker.js              # PWA Offline Caching & Notification Handler (v2.0)
 ├── dsa_roadmap_337_data.js        # 337 DSA Topics Dataset (~243 Unique Problems)
 ├── aptitude_roadmap_24_data.js    # 24 Quantitative Aptitude Chapters Dataset (96 MCQs)
 ├── manifest.webmanifest           # Progressive Web App Manifest

@@ -149,9 +149,11 @@ const DashboardApp = (() => {
       });
     }
 
-    if (vault.sleepLogs && vault.sleepLogs[selectedDate] !== undefined) {
-      ensureDayRecord(selectedDate);
-      state.daily[selectedDate].sleep.hours = vault.sleepLogs[selectedDate];
+    if (vault.sleepLogs && typeof vault.sleepLogs === 'object') {
+      Object.keys(vault.sleepLogs).forEach(dStr => {
+        ensureDayRecord(dStr);
+        state.daily[dStr].sleep.hours = Number(vault.sleepLogs[dStr]) || 0;
+      });
     }
 
     if (vault.streak) {
@@ -924,9 +926,26 @@ const DashboardApp = (() => {
       const sleepData = getSleepData();
       sleepChartInstance.data.labels = sleepData.labels;
       sleepChartInstance.data.datasets[0].data = sleepData.hoursData;
-      sleepChartInstance.data.datasets[0].backgroundColor = sleepData.hoursData.map((_, idx) =>
-        idx === sleepData.todayIdx ? '#6366F1' : '#C7D2FE'
-      );
+      const sCtx = sleepChartInstance.ctx;
+      if (sCtx) {
+        const todaySleepGrad = sCtx.createLinearGradient(0, 0, 0, 110);
+        todaySleepGrad.addColorStop(0, '#6366F1');
+        todaySleepGrad.addColorStop(1, '#4F46E5');
+
+        const pastLoggedSleepGrad = sCtx.createLinearGradient(0, 0, 0, 110);
+        pastLoggedSleepGrad.addColorStop(0, '#C084FC');
+        pastLoggedSleepGrad.addColorStop(1, '#7C3AED');
+
+        const emptySleepGrad = sCtx.createLinearGradient(0, 0, 0, 110);
+        emptySleepGrad.addColorStop(0, '#F1F5F9');
+        emptySleepGrad.addColorStop(1, '#E2E8F0');
+
+        sleepChartInstance.data.datasets[0].backgroundColor = sleepData.dates.map((dStr, idx) => {
+          const val = sleepData.hoursData[idx] || 0;
+          if (val === 0) return emptySleepGrad;
+          return (idx === sleepData.todayIdx) ? todaySleepGrad : pastLoggedSleepGrad;
+        });
+      }
       sleepChartInstance.update();
     }
     if (lineChartInstance) {
@@ -1581,12 +1600,15 @@ const DashboardApp = (() => {
     state.daily[selectedDate].sleep = { hours: updated, target: target };
     if (window.PrepVault) {
       window.PrepVault.logSleep(selectedDate, updated);
+      window.PrepVault.save();
     }
     saveState();
 
     setElText('sleep-today-hrs', `${updated.toFixed(1)} hrs`);
+    renderTodaySummary();
+    renderWeeklyHeatmap();
     updateCharts();
-    showToast(`Sleep updated: ${updated.toFixed(1)} hrs 🌙`);
+    showToast(`Sleep updated: ${updated.toFixed(1)} hrs for ${formatDateHuman(selectedDate)} 🌙`);
   }
 
   function setElText(id, txt) {

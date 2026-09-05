@@ -77,6 +77,12 @@ const ReminderEngine = (() => {
     if (!Array.isArray(list)) return;
     try {
       localStorage.setItem(REMINDERS_KEY, JSON.stringify(list));
+      if (typeof window !== 'undefined' && window.PrepVault && window.PrepVault._state) {
+        window.PrepVault._state.reminders = list;
+        if (typeof window.PrepVault.save === 'function') {
+          window.PrepVault.save();
+        }
+      }
     } catch (e) {
       console.warn('[ReminderEngine] Failed to save reminders (localStorage full?):', e);
     }
@@ -688,13 +694,17 @@ const ReminderEngine = (() => {
     };
   }
 
-  /** Validate and normalise a "HH:MM" time string. Returns null if invalid. */
+  /** Validate and normalise a "HH:MM" time string. Robust against seconds and AM/PM notations. */
   function _validateTime(time) {
     if (!time || typeof time !== 'string') return null;
-    const match = time.match(/^(\d{1,2}):(\d{2})$/);
+    time = time.trim();
+    const match = time.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?$/i);
     if (!match) return null;
-    const h = parseInt(match[1], 10);
+    let h = parseInt(match[1], 10);
     const m = parseInt(match[2], 10);
+    const ampm = match[3] ? match[3].toUpperCase() : null;
+    if (ampm === 'PM' && h < 12) h += 12;
+    if (ampm === 'AM' && h === 12) h = 0;
     if (h < 0 || h > 23 || m < 0 || m > 59) return null;
     return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
   }

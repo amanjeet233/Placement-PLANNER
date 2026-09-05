@@ -487,7 +487,7 @@
       <div class="flex flex-col sm:flex-row items-center justify-between gap-2 pb-2 border-b border-indigo-100">
 
         <!-- Left: Brand -->
-        <a href="index.html"
+        <a href="roadmap.html" title="Open 119-Day / 90-Day Curriculum Planner"
           class="flex items-center gap-2 group text-decoration-none w-full sm:w-auto justify-between sm:justify-start">
           <div class="flex items-center gap-2">
             <div
@@ -507,12 +507,22 @@
           </div>
         </a>
 
-        <!-- Center: Motivational Quote -->
-        <div
-          class="hidden md:flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-white/90 border border-slate-200 text-slate-800 text-[11px] shadow-2xs">
-          <i data-lucide="sparkles" class="w-3 h-3 text-amber-500 fill-amber-400/40 animate-pulse"></i>
-          <span class="font-bold italic text-slate-900">"Discipline today creates opportunities tomorrow."</span>
-          <span class="text-[9.5px] font-black text-indigo-700">— Amanjeet</span>
+        <!-- Center: Motivational Quote & Quick 90-Day Planner Link -->
+        <div class="flex items-center gap-2">
+          <a href="roadmap.html"
+            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 hover:from-indigo-700 hover:to-purple-800 text-white text-[11px] font-black shadow-xs hover:shadow-sm transition-all hover:scale-105 active:scale-95"
+            title="Open 119-Day & 90-Day Master Roadmap Blueprint">
+            <span>🗺️</span>
+            <span>90-Day Planner</span>
+            <span class="text-[9px] bg-white/20 px-1 py-0.2 rounded font-mono">119d</span>
+          </a>
+
+          <div
+            class="hidden md:flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-white/90 border border-slate-200 text-slate-800 text-[11px] shadow-2xs">
+            <i data-lucide="sparkles" class="w-3 h-3 text-amber-500 fill-amber-400/40 animate-pulse"></i>
+            <span class="font-bold italic text-slate-900">"Discipline today creates opportunities tomorrow."</span>
+            <span class="text-[9.5px] font-black text-indigo-700">— Amanjeet</span>
+          </div>
         </div>
 
         <!-- Right: Live Date & Profile Avatar -->
@@ -544,11 +554,12 @@
         <!-- Left: 119-Day Master Plan + Mountain Art (8 Cols) -->
         <div class="lg:col-span-8 relative overflow-hidden flex flex-col justify-between min-h-[105px] pr-2">
           <div class="relative z-10 max-w-[280px] sm:max-w-sm md:max-w-md">
-            <div
-              class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-indigo-100 border border-indigo-300 text-indigo-900 text-[9.5px] font-black tracking-wide mb-1 shadow-2xs">
+            <a href="roadmap.html"
+              class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-indigo-100 hover:bg-indigo-200 border border-indigo-300 text-indigo-950 text-[9.5px] font-black tracking-wide mb-1 shadow-2xs transition-all hover:scale-102 cursor-pointer"
+              title="Click to open 119-Day / 90-Day Curriculum Planner">
               <i data-lucide="calendar-range" class="w-3 h-3 text-indigo-700 stroke-[2.4]"></i>
-              119-DAY MASTER PLAN
-            </div>
+              119-DAY MASTER PLAN ↗
+            </a>
 
             <h1 class="text-base sm:text-lg lg:text-xl font-black text-slate-950 tracking-tight leading-snug mt-0.5">
               Consistent Effort Creates <br class="hidden sm:inline" />
@@ -2177,59 +2188,80 @@
     }
 
     function saveReminder() {
-      const titleVal = document.getElementById('rm-title').value.trim();
-      const timeVal  = document.getElementById('rm-time').value;
+      try {
+        const titleEl = document.getElementById('rm-title');
+        const timeEl  = document.getElementById('rm-time');
+        const titleVal = titleEl ? titleEl.value.trim() : '';
+        const timeVal  = timeEl ? timeEl.value.trim() : '';
 
-      if (!titleVal) {
-        document.getElementById('rm-title').style.borderColor = '#F87171';
-        document.getElementById('rm-title').focus();
-        showDashboardToast('⚠️ Please enter a reminder title.');
-        return;
-      }
-      if (!timeVal) {
-        document.getElementById('rm-time').style.borderColor = '#F87171';
-        document.getElementById('rm-time').focus();
-        showDashboardToast('⚠️ Please select a time.');
-        return;
-      }
+        if (titleEl) titleEl.style.borderColor = '';
+        if (timeEl) timeEl.style.borderColor = '';
 
-      let repeatMode = 'daily';
-      if (document.getElementById('rm-repeat-weekdays').checked) {
-        repeatMode = 'weekdays';
-      } else if (document.getElementById('rm-repeat-once') && document.getElementById('rm-repeat-once').checked) {
-        repeatMode = 'once';
-      }
-
-      const selectedDays = [];
-      if (repeatMode === 'weekdays') {
-        document.querySelectorAll('.day-chip.selected').forEach(c => {
-          selectedDays.push(parseInt(c.dataset.day, 10));
-        });
-        if (selectedDays.length === 0) {
-          showDashboardToast('⚠️ Please select at least one day.');
+        if (!titleVal) {
+          if (titleEl) {
+            titleEl.style.borderColor = '#F87171';
+            titleEl.focus();
+          }
+          showDashboardToast('⚠️ Please enter a reminder title.');
           return;
         }
+        if (!timeVal) {
+          if (timeEl) {
+            timeEl.style.borderColor = '#F87171';
+            timeEl.focus();
+          }
+          showDashboardToast('⚠️ Please select a time.');
+          return;
+        }
+
+        let repeatMode = 'daily';
+        if (document.getElementById('rm-repeat-weekdays') && document.getElementById('rm-repeat-weekdays').checked) {
+          repeatMode = 'weekdays';
+        } else if (document.getElementById('rm-repeat-once') && document.getElementById('rm-repeat-once').checked) {
+          repeatMode = 'once';
+        }
+
+        const selectedDays = [];
+        if (repeatMode === 'weekdays') {
+          document.querySelectorAll('.day-chip.selected').forEach(c => {
+            if (c.dataset && c.dataset.day !== undefined) {
+              selectedDays.push(parseInt(c.dataset.day, 10));
+            }
+          });
+          if (selectedDays.length === 0) {
+            // Default to all 7 days if none specifically picked
+            [0, 1, 2, 3, 4, 5, 6].forEach(d => selectedDays.push(d));
+          }
+        }
+
+        const msgEl = document.getElementById('rm-message');
+        const enabledEl = document.getElementById('rm-enabled');
+
+        const data = {
+          title:   titleVal,
+          time:    timeVal,
+          message: msgEl ? msgEl.value.trim() : '',
+          repeat:  repeatMode,
+          days:    selectedDays,
+          enabled: enabledEl ? enabledEl.checked : true
+        };
+
+        if (typeof ReminderEngine !== 'undefined') {
+          if (_editingId) {
+            ReminderEngine.updateReminder(_editingId, data);
+            showDashboardToast(`✅ Reminder "${titleVal}" updated!`);
+          } else {
+            ReminderEngine.addReminder(data);
+            showDashboardToast(`✅ Reminder "${titleVal}" saved!`);
+          }
+        }
+
+        closeModal();
+        renderList();
+      } catch (err) {
+        console.error('Failed to save reminder:', err);
+        showDashboardToast('❌ Failed to save reminder: ' + (err.message || 'Unknown error'));
       }
-
-      const data = {
-        title:   titleVal,
-        time:    timeVal,
-        message: document.getElementById('rm-message').value.trim(),
-        repeat:  repeatMode,
-        days:    selectedDays,
-        enabled: document.getElementById('rm-enabled').checked
-      };
-
-      if (_editingId) {
-        ReminderEngine.updateReminder(_editingId, data);
-        showDashboardToast(`✅ Reminder "${titleVal}" updated!`);
-      } else {
-        ReminderEngine.addReminder(data);
-        showDashboardToast(`✅ Reminder "${titleVal}" added!`);
-      }
-
-      closeModal();
-      renderList();
     }
 
     // ============================================================
