@@ -18,8 +18,8 @@
  * ===================================================================
  */
 
-const SW_VERSION  = '3.0';
-const CACHE_NAME  = 'placement-dashboard-v3'; // bump this whenever you deploy new code
+const SW_VERSION  = '3.1';
+const CACHE_NAME  = 'placement-dashboard-v3.1'; // bump this whenever you deploy new code
 
 // Assets to precache — must all exist at the given paths
 const PRECACHE_ASSETS = [
@@ -30,6 +30,7 @@ const PRECACHE_ASSETS = [
   './dashboard.css',
   './prep-sync.js',
   './firebase-config.js',
+  './firebase-firestore-sync.js',
   './firebase-messaging-sw.js',
   './reminder-engine.js',
   './manifest.webmanifest',

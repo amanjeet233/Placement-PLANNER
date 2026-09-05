@@ -221,8 +221,12 @@
     // Save and notify
     save: function () {
       try {
+        if (this._state) this._state._clientTimestamp = Date.now();
         localStorage.setItem(STORAGE_KEY, JSON.stringify(this._state));
         this._notify('local_save');
+        if (typeof window !== 'undefined' && window.CloudSync && typeof window.CloudSync.save === 'function') {
+          window.CloudSync.save();
+        }
       } catch (e) {
         console.error('PrepVault: Failed to write to localStorage', e);
       }
@@ -789,6 +793,11 @@
 
   // Initialize immediately and attach globally
   PrepVault.init();
+  PrepVault.notifyListeners = function () {
+    PrepVault.init();
+    PrepVault._notify('cloud_sync');
+  };
   window.PrepVault = PrepVault;
+  window.PrepState = PrepVault;
 
 })();
