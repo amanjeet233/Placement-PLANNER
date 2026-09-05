@@ -18,11 +18,13 @@
  * ===================================================================
  */
 
-const SW_VERSION  = '2.0';
-const CACHE_NAME  = 'placement-dashboard-v2'; // bump this whenever you deploy new code
+const SW_VERSION  = '3.0';
+const CACHE_NAME  = 'placement-dashboard-v3'; // bump this whenever you deploy new code
 
 // Assets to precache — must all exist at the given paths
 const PRECACHE_ASSETS = [
+  './',
+  './index.html',
   './dashboard.html',
   './dashboard.js',
   './dashboard.css',
