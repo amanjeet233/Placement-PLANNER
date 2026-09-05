@@ -976,11 +976,10 @@ const DashboardApp = (() => {
     }
   }
 
-  // Custom Plugin: Crisp In-Slice Percentage Labels for Solid 3D-Look Pie Chart
-  const pieSlicePercentagesPlugin = {
-    id: 'pieSlicePercentagesPlugin',
+  // Custom Plugin: Matplotlib Bakery-Style Callout Leader Lines & Badges (Collision-Free)
+  const pieCalloutLeaderLinesPlugin = {
+    id: 'pieCalloutLeaderLinesPlugin',
     afterDraw(chart) {
-      if (chart.config.type !== 'pie') return;
       const { ctx, chartArea } = chart;
       if (!chartArea) return;
       const dataset = chart.data.datasets[0];
@@ -990,57 +989,149 @@ const DashboardApp = (() => {
       if (!meta || !meta.data || meta.data.length === 0) return;
 
       const total = dataset.data.reduce((sum, v) => sum + (Number(v) || 0), 0);
+      const cx = (chartArea.left + chartArea.right) / 2;
+      const cy = (chartArea.top + chartArea.bottom) / 2;
+
       if (total === 0 || chart.config._isEmpty) {
         ctx.save();
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        const cx = (chartArea.left + chartArea.right) / 2;
-        const cy = (chartArea.top + chartArea.bottom) / 2;
-        ctx.font = 'bold 10px "Plus Jakarta Sans", sans-serif';
+        ctx.font = 'bold 10.5px "Plus Jakarta Sans", sans-serif';
         ctx.fillStyle = '#94A3B8';
         ctx.fillText('0 Tasks Logged', cx, cy);
         ctx.restore();
         return;
       }
 
-      ctx.save();
+      // Collect active slices
+      const rawCallouts = [];
       meta.data.forEach((arc, idx) => {
         const val = Number(dataset.data[idx]) || 0;
         if (val <= 0) return;
 
         const pctNum = Math.round((val / total) * 100);
-        if (pctNum <= 0) return;
+        const label = chart.data.labels[idx] || '';
+        const color = dataset.backgroundColor[idx] || '#2563EB';
 
-        const startAngle = arc.startAngle;
-        const endAngle = arc.endAngle;
-        const angleSpan = endAngle - startAngle;
-        const midAngle = startAngle + angleSpan / 2;
-
+        const midAngle = arc.startAngle + (arc.endAngle - arc.startAngle) / 2;
         const outerR = arc.outerRadius;
-        const cx = arc.x;
-        const cy = arc.y;
 
-        // Draw In-Slice Percentage text (bold white with text shadow)
-        if (angleSpan > 0.28) {
-          const inRadius = outerR * 0.60;
-          const px = cx + Math.cos(midAngle) * inRadius;
-          const py = cy + Math.sin(midAngle) * inRadius;
+        // Point on arc edge
+        const edgeX = cx + Math.cos(midAngle) * outerR;
+        const edgeY = cy + Math.sin(midAngle) * outerR;
 
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.font = '800 11px "JetBrains Mono", monospace';
-          ctx.fillStyle = '#FFFFFF';
-          ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
-          ctx.shadowBlur = 3;
-          ctx.fillText(`${pctNum}%`, px, py);
-          ctx.shadowBlur = 0;
+        // Direction: right vs left side
+        const isRight = Math.cos(midAngle) >= 0;
+
+        // Elbow inflection point
+        const elbowDist = outerR + 10;
+        const elbowX = cx + Math.cos(midAngle) * elbowDist;
+        const elbowY = cy + Math.sin(midAngle) * elbowDist;
+
+        // Target leader line endpoint
+        const targetX = isRight ? cx + outerR + 24 : cx - outerR - 24;
+        const targetY = elbowY;
+
+        rawCallouts.push({
+          idx,
+          label,
+          val,
+          pctNum,
+          color,
+          midAngle,
+          edgeX,
+          edgeY,
+          elbowX,
+          elbowY,
+          targetX,
+          targetY,
+          isRight
+        });
+      });
+
+      // Prevent Overlap: Separate into left & right lists, sort by Y and enforce minimum gap
+      const MIN_BOX_GAP = 20;
+      ['right', 'left'].forEach(side => {
+        const sideList = rawCallouts.filter(c => (side === 'right' ? c.isRight : !c.isRight));
+        sideList.sort((a, b) => a.targetY - b.targetY);
+
+        // Forward pass: resolve collisions downwards
+        for (let i = 1; i < sideList.length; i++) {
+          if (sideList[i].targetY - sideList[i - 1].targetY < MIN_BOX_GAP) {
+            sideList[i].targetY = sideList[i - 1].targetY + MIN_BOX_GAP;
+            sideList[i].elbowY = sideList[i].targetY;
+          }
         }
+
+        // Boundary constraint check: if lowest item is too close to bottom, shift upwards
+        const maxY = chartArea.bottom - 4;
+        if (sideList.length > 0 && sideList[sideList.length - 1].targetY > maxY) {
+          const shift = sideList[sideList.length - 1].targetY - maxY;
+          for (let i = sideList.length - 1; i >= 0; i--) {
+            sideList[i].targetY -= shift;
+            sideList[i].elbowY = sideList[i].targetY;
+            if (i > 0 && sideList[i].targetY - sideList[i - 1].targetY < MIN_BOX_GAP) {
+              sideList[i - 1].targetY = sideList[i].targetY - MIN_BOX_GAP;
+              sideList[i - 1].elbowY = sideList[i - 1].targetY;
+            }
+          }
+        }
+      });
+
+      // Draw Leader Lines and Callout Badges
+      ctx.save();
+      rawCallouts.forEach(c => {
+        const text = `${c.label} ${c.pctNum}%`;
+
+        // 1. Draw Leader Line (Radial edge -> Elbow -> Horizontal extension)
+        ctx.beginPath();
+        ctx.strokeStyle = '#64748B';
+        ctx.lineWidth = 1.25;
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        ctx.moveTo(c.edgeX, c.edgeY);
+        ctx.lineTo(c.elbowX, c.elbowY);
+        ctx.lineTo(c.targetX, c.targetY);
+        ctx.stroke();
+
+        // 2. Measure & Draw Callout Box
+        ctx.font = '700 9px "Plus Jakarta Sans", sans-serif';
+        const textWidth = ctx.measureText(text).width;
+        const boxW = Math.max(textWidth + 18, 48);
+        const boxH = 17;
+        const boxX = c.isRight ? c.targetX + 3 : c.targetX - boxW - 3;
+        const boxY = c.targetY - boxH / 2;
+
+        // Background Box (Pill style matching Matplotlib callout reference)
+        ctx.fillStyle = '#FFFFFF';
+        ctx.strokeStyle = '#CBD5E1';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        if (ctx.roundRect) {
+          ctx.roundRect(boxX, boxY, boxW, boxH, 4);
+        } else {
+          ctx.rect(boxX, boxY, boxW, boxH);
+        }
+        ctx.fill();
+        ctx.stroke();
+
+        // Color bullet indicator
+        ctx.beginPath();
+        ctx.arc(boxX + 6.5, boxY + boxH / 2, 2.75, 0, Math.PI * 2);
+        ctx.fillStyle = c.color;
+        ctx.fill();
+
+        // Label + Percentage Text
+        ctx.fillStyle = '#0F172A';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, boxX + 13, boxY + boxH / 2 + 0.5);
       });
       ctx.restore();
     }
   };
 
-  // 1. Weekly Breakdown Solid Pie Chart
+  // 1. Weekly Breakdown Solid / Donut Chart with Callout Lines
   function getWeeklyPieData() {
     const weekDays = getCurrentWeekDates();
     let dsaDone = 0, aptDone = 0, engDone = 0, gymDone = 0, revDone = 0;
@@ -1076,7 +1167,7 @@ const DashboardApp = (() => {
 
     const totalTasks = dsaDone + aptDone + engDone + gymDone + revDone;
 
-    // Update DOM micro counts
+    // Update DOM micro counts if elements exist
     setElText('pie-cnt-dsa', `${dsaDone}`);
     setElText('pie-cnt-apt', `${aptDone}`);
     setElText('pie-cnt-eng', `${engDone}`);
@@ -1084,8 +1175,7 @@ const DashboardApp = (() => {
     setElText('pie-cnt-rev', `${revDone}`);
     setElText('pie-total-badge', `${totalTasks} Task${totalTasks !== 1 ? 's' : ''}`);
 
-    // Vibrant Professional 3D Palette (Matching Reference Spec)
-    // DSA (Royal Blue), Aptitude (Emerald Green), English (Purple), Gym (Coral Red), Revision (Amber Gold)
+    // Vibrant Professional Palette
     const labels = ['DSA', 'Apti', 'Eng', 'Gym', 'Rev'];
     const colors = ['#2563EB', '#059669', '#7C3AED', '#E11D48', '#D97706'];
     const hoverColors = ['#1D4ED8', '#047857', '#6D28D9', '#BE123C', '#B45309'];
@@ -1121,24 +1211,30 @@ const DashboardApp = (() => {
     if (barChartInstance) barChartInstance.destroy();
 
     barChartInstance = new Chart(ctx, {
-      type: 'pie',
+      type: 'doughnut',
       data: {
         labels: pieData.labels,
         datasets: [{
           data: pieData.data,
           backgroundColor: pieData.backgroundColor,
           hoverBackgroundColor: pieData.hoverBackgroundColor,
-          borderWidth: 1.5,
+          borderWidth: 2,
           borderColor: '#FFFFFF',
-          hoverOffset: 4
+          hoverOffset: 3
         }]
       },
-      plugins: [pieSlicePercentagesPlugin],
+      plugins: [pieCalloutLeaderLinesPlugin],
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        cutout: '45%',
         layout: {
-          padding: 2
+          padding: {
+            top: 10,
+            bottom: 10,
+            left: 58,
+            right: 58
+          }
         },
         plugins: {
           legend: { display: false },
