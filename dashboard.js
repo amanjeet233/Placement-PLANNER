@@ -976,162 +976,7 @@ const DashboardApp = (() => {
     }
   }
 
-  // Custom Plugin: Matplotlib Bakery-Style Callout Leader Lines & Badges (Collision-Free)
-  const pieCalloutLeaderLinesPlugin = {
-    id: 'pieCalloutLeaderLinesPlugin',
-    afterDraw(chart) {
-      const { ctx, chartArea } = chart;
-      if (!chartArea) return;
-      const dataset = chart.data.datasets[0];
-      if (!dataset || !dataset.data) return;
-
-      const meta = chart.getDatasetMeta(0);
-      if (!meta || !meta.data || meta.data.length === 0) return;
-
-      const total = dataset.data.reduce((sum, v) => sum + (Number(v) || 0), 0);
-      const cx = (chartArea.left + chartArea.right) / 2;
-      const cy = (chartArea.top + chartArea.bottom) / 2;
-
-      if (total === 0 || chart.config._isEmpty) {
-        ctx.save();
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.font = 'bold 10.5px "Plus Jakarta Sans", sans-serif';
-        ctx.fillStyle = '#94A3B8';
-        ctx.fillText('0 Tasks Logged', cx, cy);
-        ctx.restore();
-        return;
-      }
-
-      // Collect active slices
-      const rawCallouts = [];
-      meta.data.forEach((arc, idx) => {
-        const val = Number(dataset.data[idx]) || 0;
-        if (val <= 0) return;
-
-        const pctNum = Math.round((val / total) * 100);
-        const label = chart.data.labels[idx] || '';
-        const color = dataset.backgroundColor[idx] || '#2563EB';
-
-        const midAngle = arc.startAngle + (arc.endAngle - arc.startAngle) / 2;
-        const outerR = arc.outerRadius;
-
-        // Point on arc edge
-        const edgeX = cx + Math.cos(midAngle) * outerR;
-        const edgeY = cy + Math.sin(midAngle) * outerR;
-
-        // Direction: right vs left side
-        const isRight = Math.cos(midAngle) >= 0;
-
-        // Elbow inflection point
-        const elbowDist = outerR + 10;
-        const elbowX = cx + Math.cos(midAngle) * elbowDist;
-        const elbowY = cy + Math.sin(midAngle) * elbowDist;
-
-        // Target leader line endpoint
-        const targetX = isRight ? cx + outerR + 24 : cx - outerR - 24;
-        const targetY = elbowY;
-
-        rawCallouts.push({
-          idx,
-          label,
-          val,
-          pctNum,
-          color,
-          midAngle,
-          edgeX,
-          edgeY,
-          elbowX,
-          elbowY,
-          targetX,
-          targetY,
-          isRight
-        });
-      });
-
-      // Prevent Overlap: Separate into left & right lists, sort by Y and enforce minimum gap
-      const MIN_BOX_GAP = 20;
-      ['right', 'left'].forEach(side => {
-        const sideList = rawCallouts.filter(c => (side === 'right' ? c.isRight : !c.isRight));
-        sideList.sort((a, b) => a.targetY - b.targetY);
-
-        // Forward pass: resolve collisions downwards
-        for (let i = 1; i < sideList.length; i++) {
-          if (sideList[i].targetY - sideList[i - 1].targetY < MIN_BOX_GAP) {
-            sideList[i].targetY = sideList[i - 1].targetY + MIN_BOX_GAP;
-            sideList[i].elbowY = sideList[i].targetY;
-          }
-        }
-
-        // Boundary constraint check: if lowest item is too close to bottom, shift upwards
-        const maxY = chartArea.bottom - 4;
-        if (sideList.length > 0 && sideList[sideList.length - 1].targetY > maxY) {
-          const shift = sideList[sideList.length - 1].targetY - maxY;
-          for (let i = sideList.length - 1; i >= 0; i--) {
-            sideList[i].targetY -= shift;
-            sideList[i].elbowY = sideList[i].targetY;
-            if (i > 0 && sideList[i].targetY - sideList[i - 1].targetY < MIN_BOX_GAP) {
-              sideList[i - 1].targetY = sideList[i].targetY - MIN_BOX_GAP;
-              sideList[i - 1].elbowY = sideList[i - 1].targetY;
-            }
-          }
-        }
-      });
-
-      // Draw Leader Lines and Callout Badges
-      ctx.save();
-      rawCallouts.forEach(c => {
-        const text = `${c.label} ${c.pctNum}%`;
-
-        // 1. Draw Leader Line (Radial edge -> Elbow -> Horizontal extension)
-        ctx.beginPath();
-        ctx.strokeStyle = '#64748B';
-        ctx.lineWidth = 1.25;
-        ctx.lineJoin = 'round';
-        ctx.lineCap = 'round';
-        ctx.moveTo(c.edgeX, c.edgeY);
-        ctx.lineTo(c.elbowX, c.elbowY);
-        ctx.lineTo(c.targetX, c.targetY);
-        ctx.stroke();
-
-        // 2. Measure & Draw Callout Box
-        ctx.font = '700 9px "Plus Jakarta Sans", sans-serif';
-        const textWidth = ctx.measureText(text).width;
-        const boxW = Math.max(textWidth + 18, 48);
-        const boxH = 17;
-        const boxX = c.isRight ? c.targetX + 3 : c.targetX - boxW - 3;
-        const boxY = c.targetY - boxH / 2;
-
-        // Background Box (Pill style matching Matplotlib callout reference)
-        ctx.fillStyle = '#FFFFFF';
-        ctx.strokeStyle = '#CBD5E1';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        if (ctx.roundRect) {
-          ctx.roundRect(boxX, boxY, boxW, boxH, 4);
-        } else {
-          ctx.rect(boxX, boxY, boxW, boxH);
-        }
-        ctx.fill();
-        ctx.stroke();
-
-        // Color bullet indicator
-        ctx.beginPath();
-        ctx.arc(boxX + 6.5, boxY + boxH / 2, 2.75, 0, Math.PI * 2);
-        ctx.fillStyle = c.color;
-        ctx.fill();
-
-        // Label + Percentage Text
-        ctx.fillStyle = '#0F172A';
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(text, boxX + 13, boxY + boxH / 2 + 0.5);
-      });
-      ctx.restore();
-    }
-  };
-
-  // 1. Weekly Breakdown Solid / Donut Chart with Callout Lines
+  // 1. Weekly Breakdown Donut Chart (Real Tasks Sync Across All Categories)
   function getWeeklyPieData() {
     const weekDays = getCurrentWeekDates();
     let dsaDone = 0, aptDone = 0, engDone = 0, gymDone = 0, revDone = 0;
@@ -1165,40 +1010,27 @@ const DashboardApp = (() => {
       }
     });
 
-    const totalTasks = dsaDone + aptDone + engDone + gymDone + revDone;
+    const counts = [dsaDone, aptDone, engDone, gymDone, revDone];
+    const totalTasks = counts.reduce((a, b) => a + b, 0);
 
-    // Update DOM micro counts if elements exist
+    // Update DOM micro counts and center overlay
     setElText('pie-cnt-dsa', `${dsaDone}`);
     setElText('pie-cnt-apt', `${aptDone}`);
     setElText('pie-cnt-eng', `${engDone}`);
     setElText('pie-cnt-gym', `${gymDone}`);
     setElText('pie-cnt-rev', `${revDone}`);
     setElText('pie-total-badge', `${totalTasks} Task${totalTasks !== 1 ? 's' : ''}`);
+    setElText('pie-center-val', `${totalTasks}`);
 
-    // Vibrant Professional Palette
-    const labels = ['DSA', 'Apti', 'Eng', 'Gym', 'Rev'];
-    const colors = ['#2563EB', '#059669', '#7C3AED', '#E11D48', '#D97706'];
-    const hoverColors = ['#1D4ED8', '#047857', '#6D28D9', '#BE123C', '#B45309'];
-
-    // If no tasks done yet, show subtle empty placeholder
-    if (totalTasks === 0) {
-      return {
-        labels: ['Pending Tasks'],
-        data: [1],
-        backgroundColor: ['#E2E8F0'],
-        hoverBackgroundColor: ['#CBD5E1'],
-        totalTasks: 0,
-        isEmpty: true
-      };
-    }
+    const labels = ['DSA', 'Apti', 'English', 'Gym', 'Revision'];
+    const colors = ['#4F46E5', '#10B981', '#8B5CF6', '#F43F5E', '#F59E0B'];
 
     return {
       labels,
-      data: [dsaDone, aptDone, engDone, gymDone, revDone],
-      backgroundColor: colors,
-      hoverBackgroundColor: hoverColors,
+      counts,
+      colors,
       totalTasks,
-      isEmpty: false
+      isEmpty: totalTasks === 0
     };
   }
 
@@ -1215,42 +1047,33 @@ const DashboardApp = (() => {
       data: {
         labels: pieData.labels,
         datasets: [{
-          data: pieData.data,
-          backgroundColor: pieData.backgroundColor,
-          hoverBackgroundColor: pieData.hoverBackgroundColor,
-          borderWidth: 2,
+          data: pieData.totalTasks === 0 ? [1] : pieData.counts,
+          backgroundColor: pieData.totalTasks === 0
+            ? ['#E2E8F0']
+            : pieData.colors,
+          borderWidth: 2.5,
           borderColor: '#FFFFFF',
-          hoverOffset: 3
+          hoverOffset: 4
         }]
       },
-      plugins: [pieCalloutLeaderLinesPlugin],
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        cutout: '45%',
+        cutout: '72%',
         layout: {
-          padding: {
-            top: 10,
-            bottom: 10,
-            left: 58,
-            right: 58
-          }
+          padding: 4
         },
         plugins: {
           legend: { display: false },
           tooltip: {
+            enabled: pieData.totalTasks > 0,
             backgroundColor: '#0F172A',
             titleFont: { size: 10, weight: 'bold', family: '"Plus Jakarta Sans", sans-serif' },
-            bodyFont: { size: 9.5, family: '"JetBrains Mono", monospace' },
+            bodyFont: { size: 9, family: '"JetBrains Mono", monospace' },
             padding: 8,
-            cornerRadius: 8,
+            cornerRadius: 6,
             callbacks: {
-              label: (c) => {
-                if (pieData.isEmpty) return ' No tasks completed this week yet';
-                const val = c.raw;
-                const pct = pieData.totalTasks > 0 ? Math.round((val / pieData.totalTasks) * 100) : 0;
-                return ` ${c.label}: ${val} tasks (${pct}%)`;
-              }
+              label: (ctx) => ` ${ctx.label}: ${ctx.raw} task(s)`
             }
           }
         }
