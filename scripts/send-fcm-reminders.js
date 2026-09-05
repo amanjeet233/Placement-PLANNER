@@ -158,29 +158,82 @@ function normalizePrivateKey(rawKey) {
   return key;
 }
 
+function normalizeClientEmail(rawEmail) {
+  if (!rawEmail || typeof rawEmail !== 'string') return '';
+  let email = rawEmail.trim();
+
+  // Strip wrapping quotes
+  if ((email.startsWith('"') && email.endsWith('"')) || (email.startsWith("'") && email.endsWith("'"))) {
+    email = email.slice(1, -1).trim();
+  }
+
+  // Handle JSON string accidentally pasted into FIREBASE_CLIENT_EMAIL
+  if (email.includes('client_email')) {
+    try {
+      const parsed = JSON.parse(email);
+      if (parsed.client_email) email = String(parsed.client_email).trim();
+    } catch (e) {
+      const m = email.match(/"client_email"\s*:\s*"([^"]+)"/);
+      if (m && m[1]) email = m[1].trim();
+    }
+  }
+
+  return email.replace(/\s+/g, '');
+}
+
+function normalizeProjectId(rawId) {
+  if (!rawId || typeof rawId !== 'string') return '';
+  let id = rawId.trim();
+
+  if ((id.startsWith('"') && id.endsWith('"')) || (id.startsWith("'") && id.endsWith("'"))) {
+    id = id.slice(1, -1).trim();
+  }
+
+  if (id.includes('project_id')) {
+    try {
+      const parsed = JSON.parse(id);
+      if (parsed.project_id) id = String(parsed.project_id).trim();
+    } catch (e) {
+      const m = id.match(/"project_id"\s*:\s*"([^"]+)"/);
+      if (m && m[1]) id = m[1].trim();
+    }
+  }
+
+  return id.replace(/\s+/g, '');
+}
+
 /**
  * Creates a signed Google OAuth2 JWT and exchanges it for an access token
  */
-async function getGoogleAccessToken(clientEmail, rawPrivateKey) {
+async function getGoogleAccessToken(rawClientEmail, rawPrivateKey, rawProjectId) {
   return new Promise((resolve, reject) => {
     try {
+      const clientEmail = normalizeClientEmail(rawClientEmail);
       const formattedKey = normalizePrivateKey(rawPrivateKey);
+      const projectId = normalizeProjectId(rawProjectId);
 
       if (!formattedKey || (!formattedKey.includes('-----BEGIN PRIVATE KEY-----') && !formattedKey.includes('-----BEGIN RSA PRIVATE KEY-----'))) {
+        console.log('JWT_GENERATION:             FAIL');
         return reject(new Error('FIREBASE_PRIVATE_KEY is empty or missing valid PEM header (-----BEGIN PRIVATE KEY-----). Check that you copied "private_key" and not "private_key_id" in GitHub repository secrets.'));
+      }
+
+      if (!clientEmail || !clientEmail.includes('@')) {
+        console.log('JWT_GENERATION:             FAIL');
+        return reject(new Error('FIREBASE_CLIENT_EMAIL is missing or not a valid service account email address.'));
       }
 
       let keyObj;
       try {
         keyObj = crypto.createPrivateKey({ key: formattedKey, format: 'pem' });
       } catch (pemErr) {
+        console.log('JWT_GENERATION:             FAIL');
         return reject(new Error(`FIREBASE_PRIVATE_KEY could not be decoded as a valid PEM private key: ${pemErr.message}`));
       }
 
       const now = Math.floor(Date.now() / 1000);
       const header = { alg: 'RS256', typ: 'JWT' };
       const claimSet = {
-        iss: clientEmail.trim(),
+        iss: clientEmail,
         scope: 'https://www.googleapis.com/auth/firebase.messaging',
         aud: 'https://oauth2.googleapis.com/token',
         exp: now + 3600,
@@ -200,6 +253,7 @@ async function getGoogleAccessToken(clientEmail, rawPrivateKey) {
         .replace(/\//g, '_');
 
       const jwt = `${signatureInput}.${signature}`;
+      console.log('JWT_GENERATION:             PASS');
 
       // Exchange JWT for Access Token
       const postData = new URLSearchParams({
@@ -220,20 +274,32 @@ async function getGoogleAccessToken(clientEmail, rawPrivateKey) {
           try {
             const data = JSON.parse(body);
             if (data.access_token) {
+              console.log('GOOGLE_OAUTH_TOKEN:         PASS');
               resolve(data.access_token);
             } else {
-              reject(new Error(`OAuth2 error: ${data.error_description || data.error || body}`));
+              console.log('GOOGLE_OAUTH_TOKEN:         FAIL');
+              const errDesc = data.error_description || data.error || body;
+              if (errDesc.includes('account not found')) {
+                reject(new Error(`OAuth2 error: ${errDesc}.\n👉 ACTION REQUIRED: The secret FIREBASE_CLIENT_EMAIL does not match any valid Google Service Account. Please copy the "client_email" (e.g. firebase-adminsdk-fbsvc@${projectId || 'codetrack-360'}.iam.gserviceaccount.com) from your downloaded Firebase Service Account JSON file and update GitHub Secret "FIREBASE_CLIENT_EMAIL".`));
+              } else {
+                reject(new Error(`OAuth2 error: ${errDesc}`));
+              }
             }
           } catch (e) {
+            console.log('GOOGLE_OAUTH_TOKEN:         FAIL');
             reject(new Error(`Failed to parse OAuth response: ${body}`));
           }
         });
       });
 
-      req.on('error', reject);
+      req.on('error', (err) => {
+        console.log('GOOGLE_OAUTH_TOKEN:         FAIL');
+        reject(err);
+      });
       req.write(postData);
       req.end();
     } catch (err) {
+      console.log('JWT_GENERATION:             FAIL');
       reject(err);
     }
   });
@@ -327,10 +393,38 @@ async function main() {
   console.log('CODETRACK 360 — FCM HTTP v1 PUSH DISPATCHER');
   console.log('====================================================\n');
 
+  const cleanProjectId   = normalizeProjectId(PROJECT_ID);
+  const cleanClientEmail = normalizeClientEmail(CLIENT_EMAIL);
+  const normalizedKey    = normalizePrivateKey(PRIVATE_KEY);
+  const isKeyValid       = Boolean(
+    normalizedKey &&
+    (normalizedKey.includes('-----BEGIN PRIVATE KEY-----') || normalizedKey.includes('-----BEGIN RSA PRIVATE KEY-----')) &&
+    (() => {
+      try {
+        crypto.createPrivateKey({ key: normalizedKey, format: 'pem' });
+        return true;
+      } catch (e) {
+        return false;
+      }
+    })()
+  );
+
+  const emailMatchesProject = Boolean(cleanProjectId && cleanClientEmail && cleanClientEmail.includes(cleanProjectId));
+
+  // Print Safe Diagnostics (Requirement 7)
+  console.log('--- SAFE SERVICE ACCOUNT DIAGNOSTICS ---');
+  console.log(`PROJECT_ID_PRESENT:         ${cleanProjectId ? 'YES' : 'NO'}`);
+  console.log(`CLIENT_EMAIL_PRESENT:       ${cleanClientEmail ? 'YES' : 'NO'}`);
+  console.log(`CLIENT_EMAIL_PROJECT_MATCH: ${emailMatchesProject ? 'YES' : 'NO'}`);
+  console.log(`PRIVATE_KEY_PRESENT:        ${PRIVATE_KEY ? 'YES' : 'NO'}`);
+  console.log(`PRIVATE_KEY_FORMAT_VALID:   ${isKeyValid ? 'YES' : 'NO'}`);
+  console.log(`DEVICE_TOKEN_PRESENT:       ${CUSTOM_TOKEN ? 'YES' : 'NO'}`);
+  console.log('----------------------------------------\n');
+
   // Verify Required Secrets
   const missingSecrets = [];
-  if (!PROJECT_ID) missingSecrets.push('FIREBASE_PROJECT_ID');
-  if (!CLIENT_EMAIL) missingSecrets.push('FIREBASE_CLIENT_EMAIL');
+  if (!cleanProjectId) missingSecrets.push('FIREBASE_PROJECT_ID');
+  if (!cleanClientEmail) missingSecrets.push('FIREBASE_CLIENT_EMAIL');
   if (!PRIVATE_KEY) missingSecrets.push('FIREBASE_PRIVATE_KEY');
   if (!CUSTOM_TOKEN) missingSecrets.push('FCM_DEVICE_TOKEN');
 
@@ -343,17 +437,17 @@ async function main() {
 
   const ist = getISTDateTime();
   console.log(`🕒 Execution Time (IST): ${ist.dateStr} ${ist.timeStr} (Day ${ist.dayOfWeek})`);
-  console.log(`📦 Project ID: ${PROJECT_ID}`);
+  console.log(`📦 Project ID: ${cleanProjectId}`);
   console.log(`📱 Device Token: ${CUSTOM_TOKEN.substring(0, 15)}...${CUSTOM_TOKEN.substring(CUSTOM_TOKEN.length - 8)}`);
 
   // Step 1: Obtain Google OAuth2 Access Token
   console.log('\n🔑 Authenticating with Google Cloud OAuth2...');
   let accessToken = null;
   try {
-    accessToken = await getGoogleAccessToken(CLIENT_EMAIL, PRIVATE_KEY);
-    console.log('✅ Google OAuth2 Access Token obtained successfully.');
+    accessToken = await getGoogleAccessToken(cleanClientEmail, PRIVATE_KEY, cleanProjectId);
+    console.log('✅ Google OAuth2 Access Token obtained successfully.\n');
   } catch (authErr) {
-    console.error('❌ Failed to authenticate with Firebase Service Account:', authErr.message);
+    console.error('\n❌ Failed to authenticate with Firebase Service Account:\n', authErr.message);
     process.exit(1);
   }
 
