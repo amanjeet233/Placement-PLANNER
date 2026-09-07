@@ -35,6 +35,10 @@
     var today = getLocalDateStr();
     return {
       version: 1,
+      planStartDate: '2026-09-07',
+      planTotalDays: 119,
+      _fresh_reset_sep7_clean: true,
+      _migrated_legacy_v1: false,
       streak: {
         current: 0,
         best: 0,
@@ -47,6 +51,7 @@
       dsaSolved: [],      // Array of topic numbers / problem IDs (e.g. [1, 2, 45])
       aptCompleted: [],   // Array of completed chapter IDs (e.g. ["ch-01", "ch-02"])
       solvedQuestions: {},// Map of solved MCQ question IDs (e.g. { "q-1-1": true })
+      userAnswers: {},    // Map of user chosen MCQ option indices (e.g. { "apt_1_1": 1 })
       sleepLogs: {
         // [today]: 7.0
       },
@@ -55,7 +60,7 @@
     };
   }
 
-  // Auto-migration & real-time sync from all storage keys
+  // Auto-migration from legacy storage keys (strictly executes once per user profile)
   function migrateLegacyData(state) {
     try {
       if (!state) return;
@@ -66,7 +71,12 @@
       if (!state.habits) state.habits = {};
       if (!state.streak) state.streak = { current: 0, best: 0, lastActiveDate: '' };
 
-      // 1. Migrate & sync curriculum task checkboxes (support both Array and Object map format)
+      // Guard: If legacy migration already performed, do NOT re-accumulate old deleted/unchecked items
+      if (state._migrated_legacy_v1) {
+        return;
+      }
+
+      // 1. Migrate curriculum task checkboxes (support both Array and Object map format)
       ['placement_plan_v2_tasks', '90day_tasks_v2'].forEach(function (storageKey) {
         var legacyTasks = localStorage.getItem(storageKey);
         if (legacyTasks) {
@@ -87,67 +97,79 @@
         }
       });
 
-      // 2. Migrate & sync DSA solved topics & problems
+      // 2. Migrate DSA solved topics & problems
       var legacyDsa = localStorage.getItem('placement_dsa_roadmap_v1');
       if (legacyDsa) {
-        var parsedDsa = JSON.parse(legacyDsa);
-        if (parsedDsa && parsedDsa.completedTopics && Array.isArray(parsedDsa.completedTopics)) {
-          parsedDsa.completedTopics.forEach(function (t) {
-            var num = typeof t === 'object' ? t.number : t;
-            if (num && !state.dsaSolved.includes(num)) state.dsaSolved.push(num);
-          });
-        }
+        try {
+          var parsedDsa = JSON.parse(legacyDsa);
+          if (parsedDsa && parsedDsa.completedTopics && Array.isArray(parsedDsa.completedTopics)) {
+            parsedDsa.completedTopics.forEach(function (t) {
+              var num = typeof t === 'object' ? t.number : t;
+              if (num && !state.dsaSolved.includes(num)) state.dsaSolved.push(num);
+            });
+          }
+        } catch (e) { }
       }
 
       var dsaMapRaw = localStorage.getItem('dsa_solved_problems') || localStorage.getItem('dsa_roadmap_solved_probs_v1');
       if (dsaMapRaw) {
-        var parsedMap = JSON.parse(dsaMapRaw);
-        if (parsedMap && typeof parsedMap === 'object') {
-          Object.keys(parsedMap).forEach(function (k) {
-            if (parsedMap[k]) {
-              var n = parseInt(k, 10);
-              var topicId = isNaN(n) ? k : n;
-              if (!state.dsaSolved.includes(topicId)) state.dsaSolved.push(topicId);
-            }
-          });
-        }
+        try {
+          var parsedMap = JSON.parse(dsaMapRaw);
+          if (parsedMap && typeof parsedMap === 'object') {
+            Object.keys(parsedMap).forEach(function (k) {
+              if (parsedMap[k]) {
+                var n = parseInt(k, 10);
+                var topicId = isNaN(n) ? k : n;
+                if (!state.dsaSolved.includes(topicId)) state.dsaSolved.push(topicId);
+              }
+            });
+          }
+        } catch (e) { }
       }
 
-      // 3. Migrate & sync Aptitude state
+      // 3. Migrate Aptitude state
       var legacyApt = localStorage.getItem('placement_aptitude_roadmap_v1') || localStorage.getItem('aptitude_roadmap_v1');
       if (legacyApt) {
-        var parsedApt = JSON.parse(legacyApt);
-        if (parsedApt) {
-          if (parsedApt.completedChapters && typeof parsedApt.completedChapters === 'object') {
-            Object.keys(parsedApt.completedChapters).forEach(function (cId) {
-              if (parsedApt.completedChapters[cId] && !state.aptCompleted.includes(cId)) {
-                state.aptCompleted.push(cId);
-              }
-            });
-          } else if (typeof parsedApt === 'object' && !parsedApt.completedChapters) {
-            Object.keys(parsedApt).forEach(function (k) {
-              if (parsedApt[k] && !state.aptCompleted.includes(k)) {
-                state.aptCompleted.push(k);
-              }
-            });
+        try {
+          var parsedApt = JSON.parse(legacyApt);
+          if (parsedApt) {
+            if (parsedApt.completedChapters && typeof parsedApt.completedChapters === 'object') {
+              Object.keys(parsedApt.completedChapters).forEach(function (cId) {
+                if (parsedApt.completedChapters[cId] && !state.aptCompleted.includes(cId)) {
+                  state.aptCompleted.push(cId);
+                }
+              });
+            } else if (typeof parsedApt === 'object' && !parsedApt.completedChapters) {
+              Object.keys(parsedApt).forEach(function (k) {
+                if (parsedApt[k] && !state.aptCompleted.includes(k)) {
+                  state.aptCompleted.push(k);
+                }
+              });
+            }
+            if (parsedApt.solvedQuestions && typeof parsedApt.solvedQuestions === 'object') {
+              Object.assign(state.solvedQuestions, parsedApt.solvedQuestions);
+            }
+            if (parsedApt.userAnswers && typeof parsedApt.userAnswers === 'object') {
+              if (!state.userAnswers) state.userAnswers = {};
+              Object.assign(state.userAnswers, parsedApt.userAnswers);
+            }
           }
-          if (parsedApt.solvedQuestions && typeof parsedApt.solvedQuestions === 'object') {
-            Object.assign(state.solvedQuestions, parsedApt.solvedQuestions);
-          }
-        }
+        } catch (e) { }
       }
 
-      // 4. Migrate & sync Habit / Dashboard tracking
+      // 4. Migrate Habit / Dashboard tracking
       var legacyHabits = localStorage.getItem('dashboard_habits_v1');
       if (legacyHabits) {
-        var parsedHabits = JSON.parse(legacyHabits);
-        if (parsedHabits && typeof parsedHabits === 'object') {
-          Object.keys(parsedHabits).forEach(function (k) {
-            if (state.habits[k] === undefined) {
-              state.habits[k] = parsedHabits[k];
-            }
-          });
-        }
+        try {
+          var parsedHabits = JSON.parse(legacyHabits);
+          if (parsedHabits && typeof parsedHabits === 'object') {
+            Object.keys(parsedHabits).forEach(function (k) {
+              if (state.habits[k] === undefined) {
+                state.habits[k] = parsedHabits[k];
+              }
+            });
+          }
+        } catch (e) { }
       }
 
       // Clean up streak if zero real activity exists
@@ -156,6 +178,9 @@
         state.streak.current = 0;
         state.streak.best = 0;
       }
+
+      // Mark migration as completed so legacy keys are not repeatedly re-accumulated
+      state._migrated_legacy_v1 = true;
     } catch (err) {
       console.warn('PrepVault: Sync non-critical error:', err);
     }
@@ -180,10 +205,38 @@
         this._state = getDefaultState();
       }
 
-      // Always merge latest real-time activity from all storage keys
+      // Check if state is from an older plan or if the September 7 clean reset hasn't been executed
+      var resetMarker = 'prep_plan_sep7_2026_v3';
+      var resetDone = false;
+      try { resetDone = (localStorage.getItem(resetMarker) === 'done'); } catch (e) {}
+
+      var needsReset = false;
+      if (raw) {
+        if (!this._state.planStartDate || this._state.planStartDate !== '2026-09-07' || !this._state._fresh_reset_sep7_clean) {
+          needsReset = true;
+        }
+      } else {
+        try {
+          var rawTr = localStorage.getItem('placement_tracker_v1');
+          if (rawTr) {
+            var tr = JSON.parse(rawTr);
+            if (tr && tr.startDate && tr.startDate !== '2026-09-07') {
+              needsReset = true;
+            }
+          }
+        } catch (e) {}
+      }
+
+      if (needsReset) {
+        console.log('[PrepVault] Initializing fresh preparation plan for 07 September 2026...');
+        this.resetForNewPlan('2026-09-07');
+        return this;
+      }
+
+      // Perform one-time migration from legacy storage keys if not already done
       migrateLegacyData(this._state);
 
-      // Ensure all fields exist
+      // Ensure all schema fields exist
       var defaults = getDefaultState();
       Object.keys(defaults).forEach(function (key) {
         if (PrepVault._state[key] === undefined) {
@@ -193,19 +246,15 @@
 
       this.save();
 
-      // Listen for cross-window / tab changes
+      // Listen for cross-window / tab changes to canonical vault
       window.addEventListener('storage', function (ev) {
         if (ev.key === STORAGE_KEY && ev.newValue) {
           try {
             PrepVault._state = JSON.parse(ev.newValue);
-            migrateLegacyData(PrepVault._state);
             PrepVault._notify('storage_sync');
           } catch (e) {
             console.error('PrepVault: Cross-tab sync parse error', e);
           }
-        } else if (ev.key && (ev.key.indexOf('dsa') !== -1 || ev.key.indexOf('apt') !== -1 || ev.key.indexOf('task') !== -1)) {
-          migrateLegacyData(PrepVault._state);
-          PrepVault._notify('storage_sync');
         }
       });
 
@@ -218,11 +267,48 @@
       return this._state;
     },
 
-    // Save and notify
+    // Save and notify with bi-directional mirror writes to legacy keys
     save: function () {
       try {
         if (this._state) this._state._clientTimestamp = Date.now();
         localStorage.setItem(STORAGE_KEY, JSON.stringify(this._state));
+
+        // Bi-directional mirror writes to legacy keys for backward compatibility
+        try {
+          if (this._state && Array.isArray(this._state.completedTasks)) {
+            localStorage.setItem('90day_tasks_v2', JSON.stringify(this._state.completedTasks));
+            localStorage.setItem('placement_plan_v2_tasks', JSON.stringify(this._state.completedTasks));
+          }
+          if (this._state && Array.isArray(this._state.dsaSolved)) {
+            var dsaMap = {};
+            this._state.dsaSolved.forEach(function (id) { dsaMap[id] = true; });
+            localStorage.setItem('dsa_solved_problems', JSON.stringify(dsaMap));
+            localStorage.setItem('dsa_roadmap_solved_probs_v1', JSON.stringify(dsaMap));
+          }
+          if (this._state && Array.isArray(this._state.aptCompleted)) {
+            var aptMap = {};
+            this._state.aptCompleted.forEach(function (id) { aptMap[id] = true; });
+            var existingApt = localStorage.getItem('placement_aptitude_roadmap_v1');
+            var existingUserAnswers = (this._state && this._state.userAnswers) || {};
+            try {
+              if (existingApt) {
+                var pApt = JSON.parse(existingApt);
+                if (pApt && pApt.userAnswers) {
+                  existingUserAnswers = Object.assign({}, pApt.userAnswers, existingUserAnswers);
+                }
+              }
+            } catch (e) { }
+            var aptPayload = {
+              completedChapters: aptMap,
+              userAnswers: existingUserAnswers,
+              solvedQuestions: this._state.solvedQuestions || {}
+            };
+            localStorage.setItem('placement_aptitude_roadmap_v1', JSON.stringify(aptPayload));
+          }
+        } catch (mirrorErr) {
+          /* ignore non-critical mirror error */
+        }
+
         this._notify('local_save');
         if (typeof window !== 'undefined' && window.CloudSync && typeof window.CloudSync.save === 'function') {
           window.CloudSync.save();
@@ -246,9 +332,13 @@
     _notify: function (source) {
       var state = this.get();
       // Dispatch browser custom event
-      window.dispatchEvent(new CustomEvent('prep_vault_updated', {
-        detail: { state: state, source: source }
-      }));
+      if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function' && typeof CustomEvent !== 'undefined') {
+        try {
+          window.dispatchEvent(new CustomEvent('prep_vault_updated', {
+            detail: { state: state, source: source }
+          }));
+        } catch (e) {}
+      }
       // Call registered callbacks
       this._listeners.forEach(function (fn) {
         try {
@@ -411,19 +501,10 @@
     },
 
     getCompletedTasksCount: function () {
-      var tasksMap = {};
-      var legacyTasks = localStorage.getItem('90day_tasks_v2') || localStorage.getItem('placement_plan_v2_tasks');
-      if (legacyTasks) {
-        try {
-          var pTasks = JSON.parse(legacyTasks);
-          if (Array.isArray(pTasks)) {
-            pTasks.forEach(function (id) { tasksMap[id] = true; });
-          }
-        } catch (e) { }
+      if (this._state && Array.isArray(this._state.completedTasks)) {
+        return this._state.completedTasks.length;
       }
-      var vaultArr = (this._state && this._state.completedTasks) || [];
-      vaultArr.forEach(function (id) { tasksMap[id] = true; });
-      return Object.keys(tasksMap).length;
+      return 0;
     },
 
     // ==========================================
@@ -459,27 +540,12 @@
     },
 
     getDsaSolvedCount: function () {
-      var dsaMapRaw = localStorage.getItem('dsa_solved_problems') || localStorage.getItem('dsa_roadmap_solved_probs_v1');
+      if (!this._state || !Array.isArray(this._state.dsaSolved)) return 0;
       var dsaMap = {};
-      if (dsaMapRaw) {
-        try { dsaMap = JSON.parse(dsaMapRaw) || {}; } catch (e) { }
-      }
-      var legacyDsa = localStorage.getItem('placement_dsa_roadmap_v1');
-      if (legacyDsa) {
-        try {
-          var pDsa = JSON.parse(legacyDsa);
-          if (pDsa && pDsa.completedTopics && Array.isArray(pDsa.completedTopics)) {
-            pDsa.completedTopics.forEach(function (t) {
-              var num = typeof t === 'object' ? t.number : t;
-              if (num) dsaMap[num] = true;
-            });
-          }
-        } catch (e) { }
-      }
-
-      // Merge vault array
-      var vaultArr = (this._state && this._state.dsaSolved) || [];
-      vaultArr.forEach(function (k) { dsaMap[k] = true; });
+      this._state.dsaSolved.forEach(function (k) {
+        dsaMap[k] = true;
+        dsaMap[String(k)] = true;
+      });
 
       var solvedTopicsSet = new Set();
 
@@ -516,10 +582,9 @@
     },
 
     getDsaProblemStats: function () {
-      var dsaMapRaw = localStorage.getItem('dsa_solved_problems') || localStorage.getItem('dsa_roadmap_solved_probs_v1');
       var dsaMap = {};
-      if (dsaMapRaw) {
-        try { dsaMap = JSON.parse(dsaMapRaw) || {}; } catch (e) { }
+      if (this._state && Array.isArray(this._state.dsaSolved)) {
+        this._state.dsaSolved.forEach(function (k) { dsaMap[String(k)] = true; });
       }
       var uniqueProbs = {};
       if (window.dsaRoadmapData && Array.isArray(window.dsaRoadmapData)) {
@@ -592,30 +657,10 @@
     },
 
     getAptSolvedCount: function () {
-      var aptMap = {};
-      var legacyApt = localStorage.getItem('placement_aptitude_roadmap_v1') || localStorage.getItem('aptitude_roadmap_v1');
-      if (legacyApt) {
-        try {
-          var pApt = JSON.parse(legacyApt);
-          if (pApt) {
-            if (pApt.completedChapters && typeof pApt.completedChapters === 'object') {
-              Object.keys(pApt.completedChapters).forEach(function (cId) {
-                if (pApt.completedChapters[cId]) aptMap[cId] = true;
-              });
-            } else if (typeof pApt === 'object') {
-              Object.keys(pApt).forEach(function (k) {
-                if (pApt[k]) aptMap[k] = true;
-              });
-            }
-          }
-        } catch (e) { }
+      if (this._state && Array.isArray(this._state.aptCompleted)) {
+        return Math.min(24, this._state.aptCompleted.length);
       }
-
-      var vaultArr = (this._state && this._state.aptCompleted) || [];
-      vaultArr.forEach(function (cId) { aptMap[cId] = true; });
-
-      var count = Object.keys(aptMap).filter(function (k) { return aptMap[k]; }).length;
-      return Math.min(24, count);
+      return 0;
     },
 
     getAptQuestionsSolvedCount: function () {
@@ -761,7 +806,7 @@
       this.save();
     },
 
-    setAptCompleted: function (completedChapterIds, solvedQuestionsListOrMap) {
+    setAptCompleted: function (completedChapterIds, solvedQuestionsListOrMap, userAnswersMap) {
       if (Array.isArray(completedChapterIds)) {
         this._state.aptCompleted = completedChapterIds.slice();
       }
@@ -771,6 +816,9 @@
         this._state.solvedQuestions = map;
       } else if (solvedQuestionsListOrMap && typeof solvedQuestionsListOrMap === 'object') {
         this._state.solvedQuestions = Object.assign({}, solvedQuestionsListOrMap);
+      }
+      if (userAnswersMap && typeof userAnswersMap === 'object') {
+        this._state.userAnswers = Object.assign({}, userAnswersMap);
       }
       if ((completedChapterIds && completedChapterIds.length > 0) || (solvedQuestionsListOrMap && Object.keys(this._state.solvedQuestions).length > 0)) {
         var today = getLocalDateStr();
@@ -784,10 +832,128 @@
       this.save();
     },
 
-    // Reset all progress
+    // Reset all progress across canonical vault and legacy keys
     resetAll: function () {
       this._state = getDefaultState();
+      this._state._migrated_legacy_v1 = true;
+      this._state._fresh_reset_sep7_clean = true;
+      this._state._resetTimestamp = Date.now();
+      this._state._clientTimestamp = Date.now();
+      var legacyKeys = [
+        'placement_dsa_roadmap_v1', 'dsa_solved_problems', 'dsa_roadmap_solved_probs_v1',
+        'placement_aptitude_roadmap_v1', 'aptitude_roadmap_v1',
+        'placement_plan_v2_tasks', '90day_tasks_v2', 'dashboard_habits_v1'
+      ];
+      legacyKeys.forEach(function (k) {
+        try { localStorage.removeItem(k); } catch (e) { }
+      });
       this.save();
+      this._notify('reset_all');
+    },
+
+    resetDsa: function () {
+      if (!this._state) this.init();
+      this._state.dsaSolved = [];
+      try {
+        localStorage.removeItem('placement_dsa_roadmap_v1');
+        localStorage.removeItem('dsa_solved_problems');
+        localStorage.removeItem('dsa_roadmap_solved_probs_v1');
+      } catch (e) { }
+      this.save();
+      this._notify('reset_dsa');
+    },
+
+    resetAptitude: function () {
+      if (!this._state) this.init();
+      this._state.aptCompleted = [];
+      this._state.solvedQuestions = {};
+      try {
+        localStorage.removeItem('placement_aptitude_roadmap_v1');
+        localStorage.removeItem('aptitude_roadmap_v1');
+      } catch (e) { }
+      this.save();
+      this._notify('reset_apt');
+    },
+
+    resetTasks: function () {
+      if (!this._state) this.init();
+      this._state.completedTasks = [];
+      try {
+        localStorage.removeItem('placement_plan_v2_tasks');
+        localStorage.removeItem('90day_tasks_v2');
+      } catch (e) { }
+      this.save();
+      this._notify('reset_tasks');
+    },
+
+    resetHabits: function () {
+      if (!this._state) this.init();
+      this._state.habits = {};
+      this._state.streak = { current: 0, best: 0, lastActiveDate: '' };
+      try {
+        localStorage.removeItem('dashboard_habits_v1');
+      } catch (e) { }
+      this.save();
+      this._notify('reset_habits');
+    },
+
+    // Clean reset for the new 07 September 2026 plan
+    resetForNewPlan: function (newStartDate) {
+      newStartDate = newStartDate || '2026-09-07';
+      this._state = getDefaultState();
+      this._state.planStartDate = newStartDate;
+      this._state._migrated_legacy_v1 = true;
+      this._state.completedTasks = [];
+      this._state.dsaSolved = [];
+      this._state.aptCompleted = [];
+      this._state.solvedQuestions = {};
+      this._state.habits = {};
+      this._state.sleepLogs = {};
+      this._state.streak = { current: 0, best: 0, lastActiveDate: '' };
+      this._state.lastUpdated = new Date().toISOString();
+
+      // Clear legacy storage mirrors and old plan caches
+      [
+        'placement_plan_v2_tasks',
+        '90day_tasks_v2',
+        'dsa_solved_problems',
+        'dsa_roadmap_solved_probs_v1',
+        'placement_dsa_roadmap_v1',
+        'placement_aptitude_roadmap_v1',
+        'aptitude_roadmap_v1',
+        'dashboard_habits_v1',
+        'placement_reminders_v1',
+        'placement_reminder_log_v1'
+      ].forEach(function (k) {
+        try { localStorage.removeItem(k); } catch (e) {}
+      });
+
+      // Clear plan-specific progress in placement_tracker_v1 while preserving user preferences
+      try {
+        var rawTracker = localStorage.getItem('placement_tracker_v1');
+        if (rawTracker) {
+          var tracker = JSON.parse(rawTracker);
+          tracker.startDate = newStartDate;
+          tracker.lastActiveDate = newStartDate;
+          tracker.currentStreak = 0;
+          tracker.bestStreak = 0;
+          tracker.daily = {};
+          localStorage.setItem('placement_tracker_v1', JSON.stringify(tracker));
+        }
+      } catch (e) {}
+
+      this._state._plan_20260907_reset = true;
+      this._state._fresh_reset_sep7_clean = true;
+      this._state._resetTimestamp = Date.now();
+      this._state._clientTimestamp = Date.now();
+      try {
+        localStorage.setItem('prep_plan_reset_2026_09_07', 'done');
+        localStorage.setItem('prep_plan_sep7_2026_v3', 'done');
+      } catch (e) {}
+
+      this.save();
+      this._notify('plan_reset');
+      return this;
     }
   };
 

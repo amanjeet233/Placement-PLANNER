@@ -1,10 +1,10 @@
 /**
  * ===================================================================
  * SERVICE WORKER — CodeTrack 360 Placement Prep Portal
- * Version: 2.0
+ * Version: 3.1
  *
- * Changes from v1:
- *   - Bumped CACHE_NAME to 'placement-dashboard-v2' (triggers old cache cleanup)
+ * Changes from v2.0:
+ *   - Bumped CACHE_NAME to 'placement-dashboard-v3.1' (triggers old cache cleanup)
  *   - dashboard.css confirmed present — kept in precache list
  *   - Removed unused fetchPromise variable (was declared but not awaited)
  *   - Hardened fetch handler: graceful fallback for non-HTML offline failures
@@ -106,7 +106,7 @@ self.addEventListener('fetch', (event) => {
         // Network failed — return cached fallback for HTML, undefined for others
         if (cachedResponse) return cachedResponse;
         if (event.request.headers.get('accept') && event.request.headers.get('accept').includes('text/html')) {
-          return caches.match('./dashboard.html');
+          return caches.match('./index.html') || caches.match('./dashboard.html');
         }
         return undefined;
       });
@@ -124,7 +124,7 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('push', (event) => {
   let notifTitle = 'CodeTrack 360';
   let notifBody  = 'Time to check your placement prep dashboard!';
-  let notifData  = { url: './dashboard.html' };
+  let notifData  = { url: './index.html' };
 
   if (event.data) {
     try {
@@ -165,13 +165,13 @@ self.addEventListener('notificationclick', (event) => {
 
   const targetUrl = (event.notification.data && event.notification.data.url)
     ? event.notification.data.url
-    : './dashboard.html';
+    : './index.html';
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // If a dashboard window is already open, focus it
+      // If a portal window is already open, focus it
       for (const client of clientList) {
-        if (client.url.includes('dashboard.html') && 'focus' in client) {
+        if ((client.url.includes('index.html') || client.url.includes('dashboard.html')) && 'focus' in client) {
           return client.focus();
         }
       }
@@ -202,7 +202,7 @@ self.addEventListener('message', (event) => {
           icon:    './icons/icon-192.png',
           badge:   './icons/icon-192.png',
           tag:     tag  || 'codetrack360-message',
-          data:    { url: './dashboard.html' },
+          data:    { url: './index.html' },
           vibrate: [200, 100, 200]
         })
       );

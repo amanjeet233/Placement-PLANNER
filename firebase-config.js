@@ -31,13 +31,18 @@ const firebaseConfig = {
   measurementId: "G-WBYXQS3H5G"
 };
 
-// Aliased to ensure 100% compatibility across both conventions
 const FIREBASE_CONFIG = firebaseConfig;
 
 // ↓↓↓ PASTE YOUR VAPID PUBLIC KEY HERE ↓↓↓
 // (From Firebase Console: Project Settings → Cloud Messaging → Web configuration → Key pair)
 const RAW_VAPID_KEY = "BB0KrRS_QdYqa0POO0CtCP25yhPWQ1j0z7oeJxbdmFzVYJRNh5L2mMSM6jazraXgyxUNu3-yBaU-C1183Ydz-l0";
 const VAPID_KEY = RAW_VAPID_KEY.replace(/YOUR_VAPID_PUBLIC_KEY_HERE$/, '').trim();
+
+if (typeof window !== 'undefined') {
+  window.firebaseConfig = firebaseConfig;
+  window.FIREBASE_CONFIG = firebaseConfig;
+  window.VAPID_KEY = VAPID_KEY;
+}
 
 // ===================================================================
 // FCM CLIENT ENGINE & DIAGNOSTICS (DO NOT EDIT BELOW)
@@ -165,7 +170,8 @@ const FCMClient = (() => {
     } catch (err) {
       console.warn('[FCM] Initialization failed:', err);
       _lastError = err.message;
-      return { ok: false, error: err.message };
+      // Allow app to continue without Firebase - non-critical functionality
+      return { ok: false, error: err.message, isNonCritical: true };
     }
   }
 

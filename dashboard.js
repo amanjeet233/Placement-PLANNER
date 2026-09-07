@@ -10,7 +10,7 @@ const DashboardApp = (() => {
   const DSA_KEY = 'dsa_solved_problems';
   const APT_KEY = 'placement_aptitude_roadmap_v1';
 
-  const PLAN_START_DATE = '2026-09-04';
+  const PLAN_START_DATE = '2026-09-07';
   const PLAN_TOTAL_DAYS = 119; // 119-day master roadmap
 
   const startMs = new Date(PLAN_START_DATE + 'T00:00:00').getTime();
@@ -47,7 +47,12 @@ const DashboardApp = (() => {
 
   function getTodayString() {
     const d = new Date();
-    return formatLocalDate(d);
+    const localStr = formatLocalDate(d);
+    // Anchor dashboard active tracking to Day 1 (PLAN_START_DATE = 2026-09-07) when current calendar is on or before kickoff
+    if (localStr < PLAN_START_DATE) {
+      return PLAN_START_DATE;
+    }
+    return localStr;
   }
 
   function formatLocalDate(d) {
@@ -176,6 +181,15 @@ const DashboardApp = (() => {
       if (saved) {
         state = Object.assign(state, JSON.parse(saved));
       }
+      // Reset old plan state if start date changed or plan reset marker not set
+      if (state.startDate !== PLAN_START_DATE || localStorage.getItem('prep_plan_reset_2026_09_07') !== 'done') {
+        state.startDate = PLAN_START_DATE;
+        state.lastActiveDate = PLAN_START_DATE;
+        state.currentStreak = 0;
+        state.bestStreak = 0;
+        state.daily = {};
+        saveState();
+      }
     } catch (e) {
       console.warn('Dashboard state load error', e);
     }
@@ -225,9 +239,12 @@ const DashboardApp = (() => {
 
     function tick() {
       const now = new Date();
+      const nowMs = now.getTime();
 
-      // Live Date & Greeting
-      const dateStr = now.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+      // Live Date & Greeting (anchors to 7 September 2026 on or before kickoff)
+      const dateStr = nowMs < startMs
+        ? 'Mon, Sep 7, 2026'
+        : now.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
       setElText('clock-date-str', dateStr);
 
       const hour = now.getHours();
@@ -239,25 +256,25 @@ const DashboardApp = (() => {
       if (grEl) grEl.innerHTML = `${greeting}, <b>${state.settings.userName || 'Amanjeet'}!</b>`;
 
       // Countdown (Real dynamic calculation)
-      const nowMs = now.getTime();
       const diff = endMs - nowMs;
 
-      const daysPassed = Math.max(1, Math.min(PLAN_TOTAL_DAYS, Math.floor((nowMs - startMs) / (1000 * 60 * 60 * 24)) + 1));
-      const daysRemaining = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+      const daysPassed = nowMs < startMs ? 1 : Math.min(PLAN_TOTAL_DAYS, Math.floor((nowMs - startMs) / (1000 * 60 * 60 * 24)) + 1);
+      const daysRemaining = nowMs < startMs ? PLAN_TOTAL_DAYS : Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
 
-      const fillPct = Math.min(100, Math.round((daysPassed / PLAN_TOTAL_DAYS) * 100));
+      const fillPct = Math.min(100, Math.round((Math.max(0, daysPassed) / PLAN_TOTAL_DAYS) * 100));
       const fillEl = document.getElementById('cd-progress-fill');
       if (fillEl) fillEl.style.width = `${fillPct}%`;
 
-      if (diff > 0) {
-        setElText('cd-days-gone', `${daysPassed} day${daysPassed > 1 ? 's' : ''} gone`);
+      if (diff > 0 || nowMs < startMs) {
+        setElText('cd-days-gone', `Day ${daysPassed} of ${PLAN_TOTAL_DAYS}`);
         setElText('cd-days-left', `${daysRemaining} days left`);
         setElText('kpi-days-left', `${daysRemaining}`);
 
-        const d = Math.floor(diff / (1000 * 60 * 60 * 24));
-        const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        const s = Math.floor((diff % (1000 * 60)) / 1000);
+        const activeDiff = nowMs < startMs ? (PLAN_TOTAL_DAYS * 24 * 60 * 60 * 1000) : diff;
+        const d = Math.floor(activeDiff / (1000 * 60 * 60 * 24));
+        const h = Math.floor((activeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const m = Math.floor((activeDiff % (1000 * 60 * 60)) / (1000 * 60));
+        const s = Math.floor((activeDiff % (1000 * 60)) / 1000);
 
         const dStr = String(d).padStart(2, '0');
         const hStr = String(h).padStart(2, '0');
@@ -317,8 +334,9 @@ const DashboardApp = (() => {
     const activeDates = new Set();
     const vaultHabits = (window.PrepVault && window.PrepVault.get().habits) || {};
 
-    // Gather all dates with at least 1 completed habit from state.daily and vault
+    // Gather all dates with at least 1 completed habit from state.daily and vault (ignoring pre-plan dates)
     Object.keys(state.daily).forEach(dStr => {
+      if (dStr < PLAN_START_DATE) return;
       const day = state.daily[dStr];
       if (!day) return;
       let hasDone = false;
@@ -329,6 +347,7 @@ const DashboardApp = (() => {
     });
 
     Object.keys(vaultHabits).forEach(dStr => {
+      if (dStr < PLAN_START_DATE) return;
       const v = vaultHabits[dStr];
       if (!v) return;
       let hasDone = false;
@@ -470,7 +489,18 @@ const DashboardApp = (() => {
     } catch (e) { }
     setElText('kpi-apt-count', `${aptSolvedChapters} / 24`);
 
-    // Overall Progress %
+    // Read real Tasks progress from LocalStorage fallback
+    let tasksCount = 0;
+    try {
+      const rawTasks = localStorage.getItem('placement_plan_v2_tasks') || localStorage.getItem('90day_tasks_v2');
+      if (rawTasks) {
+        const pTasks = JSON.parse(rawTasks);
+        tasksCount = Array.isArray(pTasks) ? pTasks.length : (typeof pTasks === 'object' ? Object.keys(pTasks).length : 0);
+      }
+    } catch (e) { }
+    const tasksPct = Math.min(100, Math.round((tasksCount / 119) * 100));
+
+    // Overall Progress % (Aligned with PrepVault: 30% Tasks + 35% DSA + 25% Aptitude + 10% Habits)
     const dsaPct = Math.min(100, Math.round((dsaSolvedCount / 337) * 100));
     const aptPct = Math.min(100, Math.round((aptSolvedChapters / 24) * 100));
     let habitDoneToday = 0;
@@ -484,9 +514,9 @@ const DashboardApp = (() => {
       });
     }
     const habitDailyPct = Math.round((habitDoneToday / 5) * 100);
-    let overallPct = Math.min(100, Math.round((dsaPct * 0.5) + (aptPct * 0.3) + (habitDailyPct * 0.2)));
-    if (overallPct === 0 && (dsaSolvedCount > 0 || aptSolvedChapters > 0 || habitDoneToday > 0)) {
-      overallPct = Math.max(1, Math.round((dsaSolvedCount / 337 * 50) + (aptSolvedChapters / 24 * 30) + (habitDailyPct * 0.2)));
+    let overallPct = Math.min(100, Math.round((tasksPct * 0.30) + (dsaPct * 0.35) + (aptPct * 0.25) + (habitDailyPct * 0.10)));
+    if (overallPct === 0 && (tasksCount > 0 || dsaSolvedCount > 0 || aptSolvedChapters > 0 || habitDoneToday > 0)) {
+      overallPct = Math.max(1, Math.round((tasksPct * 0.30) + (dsaSolvedCount / 337 * 35) + (aptSolvedChapters / 24 * 25) + (habitDailyPct * 0.10)));
     }
     setElText('kpi-overall-progress', `${overallPct}%`);
   }

@@ -23,7 +23,7 @@ if (typeof isFirebaseConfigured === 'function' && isFirebaseConfigured()) {
       console.log('[FCM-SW] Received background message:', payload);
       const title = (payload.notification && payload.notification.title) || (payload.data && payload.data.title) || 'CodeTrack 360 Reminder';
       const body = (payload.notification && payload.notification.body) || (payload.data && payload.data.body) || 'Time for your scheduled placement preparation!';
-      const targetUrl = (payload.data && payload.data.url) || './dashboard.html';
+      const targetUrl = (payload.data && payload.data.url) || './index.html';
 
       const options = {
         body: body,
@@ -46,7 +46,7 @@ if (typeof isFirebaseConfigured === 'function' && isFirebaseConfigured()) {
 self.addEventListener('push', (event) => {
   let notifTitle = 'CodeTrack 360 Reminder';
   let notifBody = 'Time to check your placement prep dashboard!';
-  let notifData = { url: './dashboard.html' };
+  let notifData = { url: './index.html' };
 
   if (event.data) {
     try {
@@ -83,12 +83,12 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const targetUrl = (event.notification.data && event.notification.data.url)
     ? event.notification.data.url
-    : './dashboard.html';
+    : './index.html';
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
-        if (client.url.includes('dashboard.html') && 'focus' in client) {
+        if ((client.url.includes('index.html') || client.url.includes('dashboard.html')) && 'focus' in client) {
           return client.focus();
         }
       }

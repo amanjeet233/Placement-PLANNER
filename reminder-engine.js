@@ -79,9 +79,13 @@ const ReminderEngine = (() => {
       localStorage.setItem(REMINDERS_KEY, JSON.stringify(list));
       if (typeof window !== 'undefined' && window.PrepVault && window.PrepVault._state) {
         window.PrepVault._state.reminders = list;
+        window.PrepVault._state._clientTimestamp = Date.now();
         if (typeof window.PrepVault.save === 'function') {
           window.PrepVault.save();
         }
+      }
+      if (typeof window !== 'undefined' && window.CloudSync && typeof window.CloudSync.save === 'function') {
+        window.CloudSync.save();
       }
     } catch (e) {
       console.warn('[ReminderEngine] Failed to save reminders (localStorage full?):', e);
@@ -238,7 +242,7 @@ const ReminderEngine = (() => {
           icon:               iconPath,
           badge:              iconPath,
           tag:                notifTag,
-          data:               { url: './dashboard.html', reminderId: notifTag },
+          data:               { url: './index.html', reminderId: notifTag },
           requireInteraction: true,
           renotify:           true,
           vibrate:            [200, 100, 200]
@@ -927,3 +931,17 @@ const ReminderEngine = (() => {
 
 // Expose globally
 window.ReminderEngine = ReminderEngine;
+
+// Cross-tab synchronization listener for reminders
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', function (ev) {
+    if (ev.key === 'placement_reminders_v1') {
+      if (typeof ReminderUI !== 'undefined' && typeof ReminderUI.renderList === 'function') {
+        ReminderUI.renderList();
+      }
+      if (typeof DashboardApp !== 'undefined' && typeof DashboardApp.renderRemindersList === 'function') {
+        DashboardApp.renderRemindersList();
+      }
+    }
+  });
+}

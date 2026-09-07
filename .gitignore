@@ -14,3 +14,5 @@ npm-debug.log*
 
 # Scratch directory (automated tests)
 scratch/
+test-results/
+artifacts/

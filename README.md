@@ -35,7 +35,7 @@ Experience the full interactive command center directly in your browser:
 | **🚀 Live Command Center** | [`amanjeet233.github.io/Placement-PLANNER/`](https://amanjeet233.github.io/Placement-PLANNER/) | Full interactive dashboard, habit steppers, real-time analytics & FCM setup |
 | **🗺️ 119-Day Blueprint** | [`/roadmap.html`](https://amanjeet233.github.io/Placement-PLANNER/roadmap.html) | Complete 17-week phase-by-phase static curriculum and task matrix |
 | **📁 Source Code** | [`github.com/amanjeet233/Placement-PLANNER`](https://github.com/amanjeet233/Placement-PLANNER) | Open-source GitHub repository with automated test suites & workflows |
-| **📖 Setup Guide** | [`SETUP.md`](./SETUP.md) | Step-by-step documentation for Firebase setup and GitHub Actions secrets |
+| **📖 Setup Guide** | [`docs/SETUP.md`](./docs/SETUP.md) | Step-by-step documentation for Firebase setup and GitHub Actions secrets |
 
 ---
 
@@ -45,7 +45,7 @@ Experience the full interactive command center directly in your browser:
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │  [ >_ CodeTrack 360 PRO ]                 "Discipline today creates opportunities tomorrow."    [ ☁️ Synced ] │
 ├────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│  🎯 119-DAY MASTER PLAN (04 Sep – 31 Dec 2026)                    ⏱️ TIME REMAINING                    │
+│  🎯 119-DAY MASTER PLAN (07 Sep 2026 Start)                    ⏱️ TIME REMAINING                    │
 │  Consistent Effort Creates Extraordinary Results                 117 DAYS : 12 HRS : 04 MINS : 07 SECS │
 ├───────────────────┬───────────────────┬───────────────────┬───────────────────┬────────────────────────┤
 │   📅 118 Days Left│   📈 1% Progress  │   🔥 1 Day Streak │   🏆 1 Best Streak│   🧩 0/337 DSA Topics  │
@@ -98,7 +98,7 @@ Most students and job-seekers manage their placement preparation in a fragmented
 - **Live Countdown Timer**: Real-time ticker counting down to the target completion milestone (Dec 31, 2026).
 - **Tactile Habit Steppers**: Daily adjustable steppers with direct checkmarks for **DSA (3 topics/day)**, **Aptitude (2 chapters/day)**, **English**, **Gym**, and **Night Revision**.
 - **Accurate Streak Continuity Engine**: Calendar date arithmetic tracking consecutive active preparation days with missed-day detection and all-time best streaks.
-- **Weighted Progress Matrix**: Calculates true placement readiness by weighting DSA (50%), Aptitude (30%), and Foundation (20%).
+- **Weighted Progress Matrix**: Calculates true placement readiness by weighting 119-Day Curriculum Tasks (30%), DSA (35%), Aptitude (25%), and Daily Habits (10%).
 
 ### 🧩 2. 337 DSA Placement Topics (`dsa_roadmap_337_data.js`)
 - **Striver SDE Sheet & CTO Bhaiya Alignment**: Complete coverage across Arrays, Strings, Two Pointers, Linked Lists, Binary Search, Trees, BST, Graphs, Dynamic Programming, and Tries.
@@ -128,11 +128,11 @@ Most students and job-seekers manage their placement preparation in a fragmented
 
 ### 📦 7. Master Backup & Cross-Device Restore
 - **1-Click JSON Export**: Generates a unified backup (`placement_master_backup_v1`) capturing all habits, streaks, solved DSA problems, aptitude chapters, and reminders.
-- **Zero Data Loss Import**: Validates and restores state across any domain or browser origin with backward-compatible schema migration.
+- **Resilient State Import**: Validates and restores state across any domain or browser origin with backward-compatible schema migration.
 
 ### 📱 8. Progressive Web App (PWA)
 - **Installable Native Experience**: Add to home screen on Android, iOS, Windows, and macOS.
-- **Service Worker v2.0**: Intelligent stale-while-revalidate caching for instant, zero-latency loading.
+- **Service Worker v3.1**: Intelligent stale-while-revalidate caching for instant, zero-latency loading.
 
 ---
 
@@ -141,9 +141,9 @@ Most students and job-seekers manage their placement preparation in a fragmented
 ```mermaid
 flowchart TD
     subgraph Client["📱 User Client (Browser / PWA)"]
-        UI["CodeTrack 360 Dashboard\n(index.html / dashboard.html)"]
+        UI["CodeTrack 360 Dashboard\n(index.html / dashboard.html redirect)"]
         State["Unified State Engine\n(prep-sync.js / localStorage)"]
-        SW["Service Worker v2.0\n(service-worker.js)"]
+        SW["Service Worker v3.1\n(service-worker.js)"]
         FCM_SW["Firebase Messaging SW\n(firebase-messaging-sw.js)"]
         CloudClient["Firestore Sync Engine\n(firebase-firestore-sync.js)"]
     end
@@ -200,8 +200,8 @@ CodeTrack 360 utilizes a **three-tier notification hierarchy** to balance batter
 > 3. **Cron Scheduling Window**: GitHub Actions cron runners execute on a shared best-effort schedule (every 15 minutes). The script utilizes a **±15 minute evaluation window** to ensure no reminder is missed due to runner queuing delays.
 
 For complete deep-dive setup instructions, refer to:
-- [`SETUP.md`](./SETUP.md) — Step-by-step secret configuration.
-- [`README_FCM_GITHUB_ACTIONS.md`](./README_FCM_GITHUB_ACTIONS.md) — Technical protocol specification.
+- [`docs/SETUP.md`](./docs/SETUP.md) — Step-by-step secret configuration.
+- [`docs/README_FCM_GITHUB_ACTIONS.md`](./docs/README_FCM_GITHUB_ACTIONS.md) — Technical protocol specification.
 
 ---
 
@@ -398,9 +398,9 @@ Make the plan realistic, intense, and structured for maximum retention with zero
 ---
 
 ## 🧪 Development & Testing
-
+ 
 CodeTrack 360 can be run locally without any build process:
-
+ 
 ```bash
 # Using Python 3 built-in HTTP server
 python -m http.server 5500
@@ -409,7 +409,13 @@ python -m http.server 5500
 npx serve .
 ```
 
-For GitHub Actions testing, you can manually trigger the FCM push workflow from the Actions tab to verify notification delivery.
+### Running Automated Test Suite
+Run the 30-assertion automated test suite covering dataset integrity, state migration, streak arithmetic, weighted progress, offline fallback, and RS256 JWT auth:
+```bash
+npm test
+```
+
+For GitHub Actions testing, you can manually trigger the FCM push workflow from the Actions tab (`workflow_dispatch`) to verify notification delivery.
 
 ---
 
@@ -418,7 +424,7 @@ For GitHub Actions testing, you can manually trigger the FCM push workflow from 
 ```
 Placement-PLANNER/
 ├── index.html                     # Primary Executive Command Center (Dashboard)
-├── dashboard.html                 # Direct Dashboard View
+├── dashboard.html                 # Client-Side Redirect Shim -> index.html
 ├── roadmap.html                   # 119-Day Static Reference Blueprint Table
 ├── dashboard.js                   # Dashboard Controller & DOM Bindings
 ├── dashboard.css                  # Custom SaaS Design Tokens & Glassmorphism
@@ -426,14 +432,21 @@ Placement-PLANNER/
 ├── firebase-config.js             # Public Firebase Web App & VAPID Configuration
 ├── firebase-firestore-sync.js     # Real-Time Bi-Directional Cloud Sync Engine
 ├── firebase-messaging-sw.js       # Background FCM Service Worker Handler
-├── service-worker.js              # PWA Offline Caching & Notification Handler (v2.0)
-├── dsa_roadmap_337_data.js        # 337 DSA Topics Dataset (~243 Unique Problems)
+├── service-worker.js              # PWA Offline Caching & Notification Handler (v3.1)
+├── dsa_roadmap_337_data.js        # 337 DSA Topics Dataset (244 Unique Problems, 388 Refs)
 ├── aptitude_roadmap_24_data.js    # 24 Quantitative Aptitude Chapters Dataset (96 MCQs)
 ├── manifest.webmanifest           # Progressive Web App Manifest
 ├── package.json                   # Automated Test Scripts & Project Metadata
+├── tests/
+│   └── test_audit_suite.js        # Automated Audit Test Suite (30 unit & integration tests)
 ├── LICENSE                        # Open Source MIT License
-├── SETUP.md                       # Complete Firebase & Secret Setup Guide
-├── README_FCM_GITHUB_ACTIONS.md   # Deep-Dive FCM HTTP v1 Protocol Architecture
+├── docs/                          # Comprehensive Documentation & Audit Reports
+│   ├── SETUP.md                   # Complete Firebase & Secret Setup Guide
+│   ├── README_FCM_GITHUB_ACTIONS.md # Deep-Dive FCM HTTP v1 Protocol Architecture
+│   ├── AUDIT_REPORT.md            # Architecture, Security & Production Audit
+│   ├── BUG_FIX_LOG.md             # Complete Bug Resolution & Fix History
+│   ├── STATE_ARCHITECTURE.md      # Dual-Storage & State Synchronization Specs
+│   └── TEST_RESULTS.md            # Automated Audit Test Suite Results
 ├── .nojekyll                      # GitHub Pages Jekyll Bypass Configuration
 ├── .github/workflows/
 │   ├── deploy-pages.yml           # Automatic GitHub Pages Deployment
